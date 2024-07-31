@@ -21,10 +21,10 @@
                 </div>
                 {{range .Containers}}
                 <div class="container-list-item">
-                    <div><a href="/container/{{.ID}}">{{slice .ID 0 12}}</a></div>
-                    <div>{{slice (index .Names 0) 0 12}}</div>
+                    <div><a href="/container/{{.ID}}">{{truncate .ID 12}}</a></div>
+                    <div>{{truncate (index .Names 0) 12}}</div>
                     <div>{{if eq (slice .Image 0 6) "sha256"}}-{{else}}{{.Image}}{{end}}</div>
-                    <div>{{if gt (len .Command) 15}}{{slice .Command 0 16}}{{else}}{{.Command}}{{end}}</div>
+                    <div>{{truncate .Command 16}}</div>
                     <div>{{.Status}}</div>
                 </div>
                 {{end}}

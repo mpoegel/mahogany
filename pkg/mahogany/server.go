@@ -278,11 +278,17 @@ func (s *Server) HandleWatchtowerUpdate(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func loadTemplates(baseDir string) (*template.Template, error) {
-	plate, err := template.ParseGlob(path.Join(baseDir, "views/*.html"))
+func loadTemplates(baseDir string) (plate *template.Template, err error) {
+	plate = template.New("").Funcs(template.FuncMap{
+		"truncate": func(str string, maxLen int) string {
+			maxLen = min(len(str), maxLen)
+			return str[0:maxLen]
+		},
+	})
+	plate, err = plate.ParseGlob(path.Join(baseDir, "views/*.html"))
 	if err != nil {
-		return nil, err
+		return
 	}
 	plate, err = plate.ParseGlob(path.Join(baseDir, "templates/*.html"))
-	return plate, err
+	return
 }

@@ -16,6 +16,8 @@ type Watchtower struct {
 	token string
 }
 
+// NewWatchtower creates a client for the Watchtower HTTP API
+// API spec: https://containrrr.dev/watchtower/http-api-mode/
 func NewWatchtower(addr, token string) WatchtowerI {
 	return &Watchtower{addr: addr, token: token}
 }
