@@ -1,0 +1,21 @@
+{{define "WatchtowerView"}}
+<!DOCTYPE html>
+<html>
+
+{{template "header"}}
+
+<body>
+    {{template "titlebar"}}
+    <div id="content">
+        <div id="sidebar">
+            {{template "sidebar"}}
+        </div>
+        <div>
+            <div class="manifest-action" hx-post="/watchtower/update" hx-swap="outerHTML settle:3s" hx-target="#toast">
+                Update Images</div>
+        </div>
+    </div>
+</body>
+
+</html>
+{{end}}

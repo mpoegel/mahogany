@@ -1,0 +1,5 @@
+mahogany
+!pkg/mahogany
+
+dist/
+.env

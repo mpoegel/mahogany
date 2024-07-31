@@ -1,0 +1,37 @@
+{{define "IndexView"}}
+<!DOCTYPE html>
+<html>
+
+{{template "header"}}
+
+<body>
+    {{template "titlebar"}}
+    <div id="content">
+        <div id="sidebar">
+            {{template "sidebar"}}
+        </div>
+        <div>
+            <div id="containers-list">
+                <div class="container-list-item" id="container-list-header">
+                    <div>ID</div>
+                    <div>Names</div>
+                    <div>Image</div>
+                    <div>Command</div>
+                    <div>Status</div>
+                </div>
+                {{range .Containers}}
+                <div class="container-list-item">
+                    <div><a href="/container/{{.ID}}">{{slice .ID 0 12}}</a></div>
+                    <div>{{slice (index .Names 0) 0 12}}</div>
+                    <div>{{if eq (slice .Image 0 6) "sha256"}}-{{else}}{{.Image}}{{end}}</div>
+                    <div>{{if gt (len .Command) 15}}{{slice .Command 0 16}}{{else}}{{.Command}}{{end}}</div>
+                    <div>{{.Status}}</div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
+{{end}}

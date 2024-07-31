@@ -1,0 +1,104 @@
+body {
+    background-color: rgb(103, 10, 10);
+    font-family: 'Courier New', Courier, monospace;
+    color: white;
+    margin: auto;
+    padding: 20px;
+}
+
+a {
+    color: white;
+}
+
+#titlebar {
+    display: flex;
+    align-items: flex-end;
+}
+
+#toast {
+    margin: 20px 50px;
+    font-style: italic;
+    opacity: 0;
+    transition: opacity 3s ease-out;
+}
+
+#toast.htmx-swapping {
+    opacity: 100;
+}
+
+#content {
+    display: flex;
+    justify-content: flex-start;
+}
+
+#sidebar-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-item {
+    margin-bottom: 10px;
+    margin-right: 10px;
+}
+
+#container-list-header,
+#manifest-list-header {
+    font-weight: bold;
+}
+
+.container-list-item,
+.manifest-list-item {
+    display: flex;
+    justify-content: space-between;
+}
+
+.container-list-item div,
+.manifest-list-item div {
+    flex: 1;
+}
+
+#container {
+    margin-left: 20px;
+}
+
+#container-actions {
+    display: flex;
+}
+
+.container-action,
+.manifest-action {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+#container-actions div {
+    margin-right: 10px;
+}
+
+#container-logs {
+    height: 600px;
+    overflow: scroll;
+    margin-top: 20px
+}
+
+#registry {
+    width: 100%;
+}
+
+dt {
+    font-weight: bold;
+}
+
+@media (max-width: 600px) {
+    body {
+        font-size: 1.5em;
+        width: 90%;
+    }
+}
+
+@media (min-width: 601px) {
+    body {
+        font-size: 1.0em;
+        width: 1000px;
+    }
+}

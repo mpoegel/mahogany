@@ -1,0 +1,113 @@
+{{define "container-actions"}}
+<div id="container-actions">
+    <div class="container-action" hx-swap="outerHTML" hx-get="/container/{{.ID}}/inspect" hx-target="#container">Inspect
+    </div>
+    <div class="container-action" hx-swap="outerHTML" hx-post="/container/{{.ID}}/start" hx-target="#container">Start
+    </div>
+    <div class="container-action" hx-swap="outerHTML" hx-post="/container/{{.ID}}/stop" hx-target="#container">Stop
+    </div>
+    <div class="container-action" hx-swap="outerHTML" hx-post="/container/{{.ID}}/restart" hx-target="#container">
+        Restart</div>
+    <div class="container-action" hx-swap="outerHTML" hx-delete="/container/{{.ID}}/delete" hx-target="#container">
+        Delete
+    </div>
+    <div class="container-action" hx-swap="outerHTML" hx-get="/container/{{.ID}}/logs" hx-target="#container">Logs</div>
+</div>
+{{end}}
+
+{{define "container"}}
+<div id="container">
+    <h2>Container Info: {{.ContainerInfo.Name}}</h2>
+    {{template "container-actions" .ContainerInfo}}
+    <dl>
+        <dt>ID</dt>
+        <dd>{{.ContainerInfo.ID}}</dd>
+
+        <dt>Created</dt>
+        <dd>{{.ContainerInfo.Created}}</dd>
+
+        <dt>Path</dt>
+        <dd>{{.ContainerInfo.Path}}</dd>
+
+        <dt>Args</dt>
+        <dd>{{.ContainerInfo.Args}}</dd>
+
+        <dt>State</dt>
+        <dd>
+            <dl>
+                <dt>Status</dt>
+                <dd>{{.ContainerInfo.State.Status}}</dd>
+
+                <dt>Started At</dt>
+                <dd>{{.ContainerInfo.State.StartedAt}}</dd>
+
+                <dt>Finished At</dt>
+                <dd>{{.ContainerInfo.State.FinishedAt}}</dd>
+            </dl>
+        </dd>
+
+        <dt>Image</dt>
+        <dd>{{.ContainerInfo.Config.Image}}</dd>
+
+        <dt>Image ID</dt>
+        <dd>{{.ContainerInfo.Image}}</dd>
+    </dl>
+</div>
+{{end}}
+
+{{define "container-start"}}
+<div id="container">
+    {{template "container-actions" .}}
+    {{if .IsSuccess}}
+    <p>Container started.</p>
+    {{else}}
+    <p>Error: {{ .Err }}</p>
+    {{end}}
+</div>
+{{end}}
+
+{{define "container-stop"}}
+<div id="container">
+    {{template "container-actions" .}}
+    {{if .IsSuccess}}
+    <p>Container stopped.</p>
+    {{else}}
+    <p>Error: {{ .Err }}</p>
+    {{end}}
+</div>
+{{end}}
+
+{{define "container-restart"}}
+<div id="container">
+    {{template "container-actions" .}}
+    {{if .IsSuccess}}
+    <p>Container restarted.</p>
+    {{else}}
+    <p>Error: {{ .Err }}</p>
+    {{end}}
+</div>
+{{end}}
+
+{{define "container-delete"}}
+<div id="container">
+    {{if .IsSuccess}}
+    <p>Container deleted.</p>
+    {{else}}
+    {{template "container-actions" .}}
+    <p>Error: {{ .Err }}</p>
+    {{end}}
+</div>
+{{end}}
+
+{{define "container-logs"}}
+<div id="container">
+    {{template "container-actions" .ContainerInfo}}
+    {{if .IsSuccess}}
+    <div id="container-logs" hx-ext="sse" sse-connect="/container/{{.ContainerInfo.ID}}/logs/stream" sse-swap="log"
+        hx-swap="afterbegin">
+    </div>
+    {{else}}
+    <p>Error: {{ .Err }}</p>
+    {{end}}
+</div>
+{{end}}

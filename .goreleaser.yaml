@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+archives:
+  - format: tar.gz
+    # this name template makes the OS and Arch compatible with the results of `uname`.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      _{{ .Version }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - src: static/**/*
+        dst: etc/mahogany
+        info:
+          owner: mahogany
+          group: mahogany
+          mode: 0644
+
+dockers:
+  - goos: linux
+    goarch: amd64
+    image_templates:
+      - mahogany:latest
+      - mahogany:{{ .Version }}
+    extra_files:
+      - static
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

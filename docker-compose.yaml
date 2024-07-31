@@ -1,0 +1,29 @@
+services:
+  mahogany:
+    image: mahogany
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - REGISTRY_ADDR=registry:5000
+      - WATCHTOWER_ADDR=watchtower:8080
+      - WATCHTOWER_TOKEN=mytoken
+    ports:
+      - 9090:9090
+  registry:
+    image: registry
+    ports:
+      - 5050:5000
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --debug --http-api-update
+    environment:
+      - WATCHTOWER_HTTP_API_TOKEN=mytoken
+    ports:
+      - 8080:8080
