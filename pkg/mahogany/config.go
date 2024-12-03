@@ -15,6 +15,7 @@ type Config struct {
 	WatchtowerAddr  string
 	WatchtowerToken string
 	RegistryAddr    string
+	TopologyFile    string
 }
 
 func LoadConfig() Config {
@@ -27,6 +28,21 @@ func LoadConfig() Config {
 		WatchtowerAddr:  loadStrEnv("WATCHTOWER_ADDR", "localhost:8080"),
 		WatchtowerToken: loadStrEnv("WATCHTOWER_TOKEN", ""),
 		RegistryAddr:    loadStrEnv("REGISTRY_ADDR", "localhost:5000"),
+		TopologyFile:    loadStrEnv("TOPOLOGY", "topology.toml"),
+	}
+}
+
+type AgentConfig struct {
+	ServerAddr  string
+	HostName    string
+	DownloadDir string
+}
+
+func LoadAgentConfig() AgentConfig {
+	return AgentConfig{
+		ServerAddr:  loadStrEnv("SERVER_ADDR", "localhost:9091"),
+		HostName:    loadStrEnv("HOSTNAME", "mahogany"),
+		DownloadDir: loadStrEnv("DOWNLOAD_DIR", "/tmp"),
 	}
 }
 

@@ -3,3 +3,4 @@ mahogany
 
 dist/
 .env
+topology.toml

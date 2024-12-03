@@ -3,6 +3,7 @@ package mahogany
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -11,17 +12,19 @@ import (
 )
 
 type Server struct {
-	config     Config
-	view       *ViewFinder
-	httpServer *http.Server
+	config       Config
+	view         *ViewFinder
+	httpServer   *http.Server
+	updateServer *UpdateServer
 }
 
-func NewServer(config Config) (*Server, error) {
+func NewServer(config Config, updateServer *UpdateServer) (*Server, error) {
 	mux := http.NewServeMux()
 	viewFinder, err := NewViewFinder(config)
 	if err != nil {
 		return nil, err
 	}
+
 	s := &Server{
 		config: config,
 		view:   viewFinder,
@@ -31,6 +34,7 @@ func NewServer(config Config) (*Server, error) {
 			WriteTimeout: config.Timeout,
 			Handler:      mux,
 		},
+		updateServer: updateServer,
 	}
 
 	mux.HandleFunc("GET /{$}", s.HandleIndex)
@@ -46,6 +50,7 @@ func NewServer(config Config) (*Server, error) {
 	mux.HandleFunc("DELETE /registry/image/{repository}/{digest}", s.HandleRegistryImageDelete)
 	mux.HandleFunc("GET /watchtower", s.HandleWatchtower)
 	mux.HandleFunc("POST /watchtower/update", s.HandleWatchtowerUpdate)
+	mux.HandleFunc("POST /github/webhook", s.HandleGithubWebHook)
 	mux.Handle("GET /static/", http.StripPrefix("/static", http.FileServer(http.Dir(config.StaticDir))))
 
 	slog.Info("loaded mux", "routes", mux)
@@ -276,6 +281,18 @@ func (s *Server) HandleWatchtowerUpdate(w http.ResponseWriter, r *http.Request) 
 		slog.Error("failed to execute toast template", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+}
+
+func (s *Server) HandleGithubWebHook(w http.ResponseWriter, r *http.Request) {
+	var event GithubReleaseEvent
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&event); err != nil {
+		slog.Error("failed to decode github webhook", "err", err)
+		return
+	}
+	// TODO check github signature
+	slog.Info("received github webhook", "name", *event.Repo.Name)
+	s.updateServer.PropagateGithubRelease(&event)
 }
 
 func loadTemplates(baseDir string) (plate *template.Template, err error) {

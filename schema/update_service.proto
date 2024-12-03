@@ -1,0 +1,42 @@
+syntax = "proto3";
+package sequoia;
+
+option go_package = "github.com/mpoegel/sequoia/pkg/schema";
+
+import "google/protobuf/timestamp.proto";
+
+service UpdateService {
+    rpc RegisterManifest(RegisterManifestRequest) returns (RegisterManifestResponse);
+    rpc ReleaseStream(ReleaseStreamRequest) returns (stream ReleaseStreamResponse);
+}
+
+message RegisterManifestRequest {
+    string hostname = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    repeated Asset assets = 3;
+}
+
+message RegisterManifestResponse {
+}
+
+message ReleaseStreamRequest {
+    string hostname = 1;
+}
+
+message ReleaseStreamResponse {
+    Release release = 1;
+    google.protobuf.Timestamp timestamp = 2;
+}
+
+message Release {
+    string name = 1;
+    string version = 2;
+    string repository_name = 3;
+    repeated Asset assets = 4;
+    string install_command = 5;
+}
+
+message Asset {
+    string name = 1;
+    string source_url = 3;
+}
