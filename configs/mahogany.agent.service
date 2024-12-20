@@ -1,0 +1,18 @@
+[Unit]
+Description=An agent for a dead-simple web UI for managing docker containers
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+User=root
+Group=root
+Type=simple
+Restart=always
+RestartSec=1
+ExecStart=/usr/local/bin/mahogany agent
+StandardOutput=append:/var/log/homelab/mahogany.agent.slog.log
+StandardError=append:/var/log/homelab/mahogany.agent.slog.log
+
+[Install]
+WantedBy=multi-user.target

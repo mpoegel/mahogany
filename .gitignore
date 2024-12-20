@@ -3,4 +3,5 @@ mahogany
 
 dist/
 .env
+!configs/.env
 topology.toml
