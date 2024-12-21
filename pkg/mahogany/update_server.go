@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"strings"
 
 	schema "github.com/mpoegel/mahogany/pkg/schema"
 	grpc "google.golang.org/grpc"
@@ -125,6 +126,11 @@ func (s *UpdateServer) PropagateGithubRelease(event *GithubReleaseEvent) {
 			asset := &schema.Asset{
 				Name:      *asset.Name,
 				SourceUrl: *asset.BrowserDownloadURL,
+			}
+			sourceMask := fmt.Sprintf("https://github.com/%s/releases", pack.GithubPackage.Name)
+			if !strings.HasPrefix(asset.SourceUrl, sourceMask) {
+				slog.Warn("asset has suspicious download url", "url", asset.SourceUrl)
+				continue
 			}
 			release.Assets = append(release.Assets, asset)
 		}
