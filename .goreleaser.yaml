@@ -35,7 +35,7 @@ archives:
           group: mahogany
           mode: 0644
       - src: configs/.env
-        dst: etc/mahogany
+        dst: etc/mahogany/.env
         info:
           owner: mahogany
           group: mahogany
