@@ -7,28 +7,32 @@ import (
 )
 
 type Config struct {
-	StaticDir       string
-	Port            int
-	Timeout         time.Duration
-	DockerHost      string
-	DockerVersion   string
-	WatchtowerAddr  string
-	WatchtowerToken string
-	RegistryAddr    string
-	TopologyFile    string
+	StaticDir         string
+	Port              int
+	Timeout           time.Duration
+	DockerHost        string
+	DockerVersion     string
+	WatchtowerAddr    string
+	WatchtowerToken   string
+	WatchtowerTimeout time.Duration
+	RegistryAddr      string
+	RegistryTimeout   time.Duration
+	TopologyFile      string
 }
 
 func LoadConfig() Config {
 	return Config{
-		StaticDir:       loadStrEnv("STATIC_DIR", "static"),
-		Port:            loadIntEnv("PORT", 9090),
-		Timeout:         time.Duration(loadIntEnv("TIMEOUT", 3)) * time.Second,
-		DockerHost:      loadStrEnv("DOCKER_HOST", "localhost"),
-		DockerVersion:   loadStrEnv("DOCKER_VERSION", "3"),
-		WatchtowerAddr:  loadStrEnv("WATCHTOWER_ADDR", "localhost:8080"),
-		WatchtowerToken: loadStrEnv("WATCHTOWER_TOKEN", ""),
-		RegistryAddr:    loadStrEnv("REGISTRY_ADDR", "localhost:5000"),
-		TopologyFile:    loadStrEnv("TOPOLOGY", "topology.toml"),
+		StaticDir:         loadStrEnv("STATIC_DIR", "static"),
+		Port:              loadIntEnv("PORT", 9090),
+		Timeout:           time.Duration(loadIntEnv("TIMEOUT", 3)) * time.Second,
+		DockerHost:        loadStrEnv("DOCKER_HOST", "localhost"),
+		DockerVersion:     loadStrEnv("DOCKER_VERSION", "3"),
+		WatchtowerAddr:    loadStrEnv("WATCHTOWER_ADDR", "localhost:8080"),
+		WatchtowerToken:   loadStrEnv("WATCHTOWER_TOKEN", ""),
+		WatchtowerTimeout: time.Duration(loadIntEnv("WATCHTOWER_TIMEOUT", 2)) * time.Second,
+		RegistryAddr:      loadStrEnv("REGISTRY_ADDR", "localhost:5000"),
+		RegistryTimeout:   time.Duration(loadIntEnv("REGISTRY_TIMEOUT", 2)) * time.Second,
+		TopologyFile:      loadStrEnv("TOPOLOGY", "topology.toml"),
 	}
 }
 

@@ -78,8 +78,8 @@ func NewViewFinder(config Config) (*ViewFinder, error) {
 
 	return &ViewFinder{
 		docker:     docker,
-		registry:   NewRegistry(config.RegistryAddr),
-		watchtower: NewWatchtower(config.WatchtowerAddr, config.WatchtowerToken),
+		registry:   NewRegistry(config.RegistryAddr, config.RegistryTimeout),
+		watchtower: NewWatchtower(config.WatchtowerAddr, config.WatchtowerToken, config.WatchtowerTimeout),
 	}, nil
 }
 
@@ -160,19 +160,19 @@ func (v *ViewFinder) GetRegistry(ctx context.Context) (*RegistryView, error) {
 		Manifests: make([]RegistryManifest, 0),
 		IsSuccess: false,
 	}
-	catalog, err := v.registry.GetCatalog()
+	catalog, err := v.registry.GetCatalog(ctx)
 	if err != nil {
 		view.Err = err
 		return view, nil
 	}
 	for _, repository := range catalog.Repositories {
-		tags, err := v.registry.GetTags(repository)
+		tags, err := v.registry.GetTags(ctx, repository)
 		if err != nil {
 			view.Err = err
 			return view, nil
 		}
 		for _, tag := range tags.Tags {
-			manifest, err := v.registry.GetManifest(tags.Name, tag)
+			manifest, err := v.registry.GetManifest(ctx, tags.Name, tag)
 			if err != nil {
 				view.Err = err
 				return view, nil
@@ -188,7 +188,7 @@ func (v *ViewFinder) DeleteRegistryImage(ctx context.Context, repository, tag st
 	view := &ActionResponseView{
 		IsSuccess: false,
 	}
-	if err := v.registry.DeleteImage(repository, tag); err != nil {
+	if err := v.registry.DeleteImage(ctx, repository, tag); err != nil {
 		view.Message = fmt.Sprintf("Failed to delete image: %v", err)
 	} else {
 		view.IsSuccess = true

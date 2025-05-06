@@ -81,8 +81,6 @@ func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	view, err := s.view.GetIndex(r.Context())
 	if err != nil {
 		slog.Error("failed to get index view", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
 	}
 	if err = plate.ExecuteTemplate(w, "IndexView", view); err != nil {
 		slog.Error("failed to execute index template", "err", err)
@@ -100,8 +98,6 @@ func (s *Server) HandleContainer(w http.ResponseWriter, r *http.Request) {
 	view, err := s.view.GetContainer(r.Context(), r.PathValue("containerID"))
 	if err != nil {
 		slog.Error("failed to get container view", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
 	}
 	if err = plate.ExecuteTemplate(w, "ContainerView", view); err != nil {
 		slog.Error("failed to execute container template", "err", err)
@@ -119,8 +115,6 @@ func (s *Server) HandleRegistry(w http.ResponseWriter, r *http.Request) {
 	view, err := s.view.GetRegistry(r.Context())
 	if err != nil {
 		slog.Error("failed to get registry view", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
 	}
 	if err = plate.ExecuteTemplate(w, "RegistryView", view); err != nil {
 		slog.Error("failed to execute registry template", "err", err)
@@ -138,8 +132,6 @@ func (s *Server) HandleWatchtower(w http.ResponseWriter, r *http.Request) {
 	view, err := s.view.GetWatchtower(r.Context())
 	if err != nil {
 		slog.Error("failed to get watchtower view", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
 	}
 	if err = plate.ExecuteTemplate(w, "WatchtowerView", view); err != nil {
 		slog.Error("failed to execute watchtower template", "err", err)
@@ -157,8 +149,6 @@ func (s *Server) HandleContainerInspect(w http.ResponseWriter, r *http.Request) 
 	view, err := s.view.GetContainer(r.Context(), r.PathValue("containerID"))
 	if err != nil {
 		slog.Error("failed to get container view", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
 	}
 	if err = plate.ExecuteTemplate(w, "container", view); err != nil {
 		slog.Error("failed to execute container template", "err", err)

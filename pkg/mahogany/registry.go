@@ -1,11 +1,13 @@
 package mahogany
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 type RegistryCatalog struct {
@@ -35,26 +37,34 @@ type RegistryManifest struct {
 }
 
 type RegistryI interface {
-	GetCatalog() (*RegistryCatalog, error)
-	GetTags(repository string) (*RegistryTags, error)
-	GetManifest(repository, tag string) (*RegistryManifest, error)
-	DeleteImage(repository, tag string) error
+	GetCatalog(ctx context.Context) (*RegistryCatalog, error)
+	GetTags(ctx context.Context, repository string) (*RegistryTags, error)
+	GetManifest(ctx context.Context, repository, tag string) (*RegistryManifest, error)
+	DeleteImage(ctx context.Context, repository, tag string) error
 }
 
 type Registry struct {
-	addr string
+	addr    string
+	timeout time.Duration
 }
 
 // NewRegistry creates a client for a docker registry
 // API spec: https://distribution.github.io/distribution/spec/api/
-func NewRegistry(registryAddr string) RegistryI {
+func NewRegistry(registryAddr string, timeout time.Duration) RegistryI {
 	return &Registry{
-		addr: registryAddr,
+		addr:    registryAddr,
+		timeout: timeout,
 	}
 }
 
-func (r *Registry) GetCatalog() (*RegistryCatalog, error) {
-	resp, err := http.Get(fmt.Sprintf("http://%s/v2/_catalog", r.addr))
+func (r *Registry) GetCatalog(ctx context.Context) (*RegistryCatalog, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/v2/_catalog", r.addr), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +77,14 @@ func (r *Registry) GetCatalog() (*RegistryCatalog, error) {
 	return catalog, nil
 }
 
-func (r *Registry) GetTags(repository string) (*RegistryTags, error) {
-	resp, err := http.Get(fmt.Sprintf("http://%s/v2/%s/tags/list", r.addr, repository))
+func (r *Registry) GetTags(ctx context.Context, repository string) (*RegistryTags, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/v2/%s/tags/list", r.addr, repository), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -81,8 +97,10 @@ func (r *Registry) GetTags(repository string) (*RegistryTags, error) {
 	return tags, nil
 }
 
-func (r *Registry) GetManifest(repository, tag string) (*RegistryManifest, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s/v2/%s/manifests/%s", r.addr, repository, tag), nil)
+func (r *Registry) GetManifest(ctx context.Context, repository, tag string) (*RegistryManifest, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/v2/%s/manifests/%s", r.addr, repository, tag), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +120,10 @@ func (r *Registry) GetManifest(repository, tag string) (*RegistryManifest, error
 	return manifest, nil
 }
 
-func (r *Registry) DeleteImage(repository, digest string) error {
-	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("http://%s/v2/%s/manifests/%s", r.addr, repository, digest), nil)
+func (r *Registry) DeleteImage(ctx context.Context, repository, digest string) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, fmt.Sprintf("http://%s/v2/%s/manifests/%s", r.addr, repository, digest), nil)
 	if err != nil {
 		return err
 	}
