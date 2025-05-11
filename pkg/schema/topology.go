@@ -49,6 +49,30 @@ type LocalPackage struct {
 	Destination string `toml:"destination" validate:"required"`
 }
 
+type ServiceMesh struct {
+}
+
+type ServiceMeshService struct {
+	Name              string             `toml:"name" validate:"required"`
+	SNI               string             `toml:"sni" validate:"required"`
+	TailscaleUpstream *TailscaleUpstream `toml:"tailscale_upstream" validate:"required_without=HostNameUpstream"`
+	HostNameUpstream  *HostNameUpstream  `toml:"hostname_upstream" validate:"required_without=TailscaleUpstream"`
+}
+
+type ServiceMeshUpstream struct {
+	Port uint16
+}
+
+type TailscaleUpstream struct {
+	Tag string
+	ServiceMeshUpstream
+}
+
+type HostNameUpstream struct {
+	HostName string
+	ServiceMeshUpstream
+}
+
 func ReadTopology(filename string) (*Topology, error) {
 	fp, err := os.Open(filename)
 	if err != nil {

@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 	"path"
+	"strings"
+	"time"
 )
 
 type Server struct {
@@ -51,6 +53,10 @@ func NewServer(config Config, updateServer *UpdateServer) (*Server, error) {
 	mux.HandleFunc("GET /watchtower", s.HandleWatchtower)
 	mux.HandleFunc("POST /watchtower/update", s.HandleWatchtowerUpdate)
 	mux.HandleFunc("POST /github/webhook", s.HandleGithubWebHook)
+	mux.HandleFunc("GET /control-plane", s.HandleGetControlPlane)
+	mux.HandleFunc("GET /settings", s.HandleGetSettings)
+	mux.HandleFunc("GET /devices", s.HandleGetDevices)
+	mux.HandleFunc("GET /device/{deviceID}", s.HandleGetDevice)
 	mux.Handle("GET /static/", http.StripPrefix("/static", http.FileServer(http.Dir(config.StaticDir))))
 
 	slog.Info("loaded mux", "routes", mux)
@@ -285,12 +291,100 @@ func (s *Server) HandleGithubWebHook(w http.ResponseWriter, r *http.Request) {
 	s.updateServer.PropagateGithubRelease(&event)
 }
 
+func (s *Server) HandleGetControlPlane(w http.ResponseWriter, r *http.Request) {
+	plate, err := loadTemplates(s.config.StaticDir)
+	if err != nil {
+		slog.Error("failed to load templates", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	view, err := s.view.GetControlPlane(r.Context())
+	if err != nil {
+		slog.Error("failed to get control plane view", "err", err)
+	}
+	if err = plate.ExecuteTemplate(w, "ControlPlaneView", view); err != nil {
+		slog.Error("failed to execute control plane template", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) HandleGetSettings(w http.ResponseWriter, r *http.Request) {
+	plate, err := loadTemplates(s.config.StaticDir)
+	if err != nil {
+		slog.Error("failed to load templates", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	view, err := s.view.GetSettings(r.Context())
+	if err != nil {
+		slog.Error("failed to get settings view", "err", err)
+	}
+	if err = plate.ExecuteTemplate(w, "SettingsView", view); err != nil {
+		slog.Error("failed to execute settings template", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) HandleGetDevices(w http.ResponseWriter, r *http.Request) {
+	plate, err := loadTemplates(s.config.StaticDir)
+	if err != nil {
+		slog.Error("failed to load templates", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	view, err := s.view.GetDevices(r.Context())
+	if err != nil {
+		slog.Error("failed to get devices view", "err", err)
+	}
+	if err = plate.ExecuteTemplate(w, "DevicesView", view); err != nil {
+		slog.Error("failed to execute devices template", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) HandleGetDevice(w http.ResponseWriter, r *http.Request) {
+	plate, err := loadTemplates(s.config.StaticDir)
+	if err != nil {
+		slog.Error("failed to load templates", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	view, err := s.view.GetDevice(r.Context(), r.PathValue("deviceID"))
+	if err != nil {
+		slog.Error("failed to get device view", "err", err)
+	}
+	if err = plate.ExecuteTemplate(w, "DeviceView", view); err != nil {
+		slog.Error("failed to execute device template", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
 func loadTemplates(baseDir string) (plate *template.Template, err error) {
+	const timeFormat = "2006-01-02T15:04:05Z"
 	plate = template.New("").Funcs(template.FuncMap{
 		"truncate": func(str string, maxLen int) string {
 			maxLen = min(len(str), maxLen)
 			return str[0:maxLen]
 		},
+		"cutOn": func(str, delim string) string {
+			return strings.Split(str, delim)[0]
+		},
+		"lastSeen": func(timeStr string) string {
+			t, err := time.Parse(timeFormat, timeStr)
+			if err != nil {
+				slog.Error("failed to parse timestamp", "err", err, "ts", timeStr)
+				return timeStr
+			}
+			sinceThen := time.Now().UTC().Sub(t)
+			if sinceThen < 1*time.Minute {
+				return "Connected"
+			}
+			if sinceThen > 24*time.Hour {
+				return fmt.Sprintf("%d days ago", sinceThen/(24*time.Hour))
+			}
+			return fmt.Sprintf("%s ago", sinceThen)
+		},
+		"trimPrefix": strings.TrimPrefix,
 	})
 	plate, err = plate.ParseGlob(path.Join(baseDir, "views/*.html"))
 	if err != nil {

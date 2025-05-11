@@ -1,6 +1,11 @@
+@font-face {
+    font-family: "DepartureMono";
+    src: url("/static/css/DepartureMono-Regular.otf");
+}
+
 body {
     background-color: rgb(103, 10, 10);
-    font-family: 'Courier New', Courier, monospace;
+    font-family: 'DepartureMono', monospace;
     color: white;
     margin: auto;
     padding: 20px;
@@ -31,6 +36,15 @@ a {
     justify-content: flex-start;
 }
 
+#content div {
+    width: 100%;
+}
+
+#sidebar {
+    width: 180px !important;
+    padding-right: 10px;
+}
+
 #sidebar-list {
     display: flex;
     flex-direction: column;
@@ -41,20 +55,49 @@ a {
     margin-right: 10px;
 }
 
+.sidebar-divider {
+    border-top: 2px solid black;
+    margin: 10px 0;
+}
+
 #container-list-header,
-#manifest-list-header {
+#manifest-list-header,
+#devices-list-header,
+#policy-list-header {
     font-weight: bold;
+    border-bottom: 1px solid black;
 }
 
 .container-list-item,
-.manifest-list-item {
+.manifest-list-item,
+.devices-list-item,
+.policy-list-item {
     display: flex;
     justify-content: space-between;
 }
 
+
+.container-list-item:not(:first-child):hover,
+.manifest-list-item:not(:first-child):hover,
+.devices-list-item:not(:first-child):hover,
+.policy-list-item:not(:first-child):hover {
+    background-color: rgb(145, 35, 35);
+}
+
 .container-list-item div,
-.manifest-list-item div {
+.manifest-list-item div,
+.devices-list-item div,
+.policy-list-item div {
     flex: 1;
+    border-right: 1px solid black;
+    padding: 2px 10px;
+}
+
+.container-list-item div:last-child,
+.manifest-list-item div:last-child,
+.devices-list-item div:last-child,
+.policy-list-item div:last-child {
+    border-right: none;
 }
 
 #container {
@@ -85,6 +128,10 @@ a {
     width: 100%;
 }
 
+.spacer {
+    height: 25px;
+}
+
 dt {
     font-weight: bold;
 }
@@ -99,6 +146,6 @@ dt {
 @media (min-width: 601px) {
     body {
         font-size: 1.0em;
-        width: 1000px;
+        width: 1200px;
     }
 }

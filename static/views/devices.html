@@ -1,0 +1,102 @@
+{{define "DevicesView"}}
+<!DOCTYPE html>
+<html>
+
+{{template "header"}}
+
+<body>
+    {{template "titlebar"}}
+    <div id="content">
+        <div id="sidebar">
+            {{template "sidebar"}}
+        </div>
+        <div>
+            <div id="devices-list">
+                <div class="devices-list-item" id="devices-list-header">
+                    <div>Machine</div>
+                    <div>Address</div>
+                    <div>Version</div>
+                    <div>Last Seen</div>
+                    <div>Tags</div>
+                </div>
+                {{range .Devices}}
+                <div class="devices-list-item">
+                    <div><a href="/device/{{.Id}}">{{.Hostname}}</a></div>
+                    <div>{{index .Addresses 0}}</div>
+                    <div>
+                        {{if .IsUpdateAvailable}}&#x2191;{{else}}&nbsp;{{end}}
+                        {{cutOn .ClientVersion "-"}}
+                    </div>
+                    <div>{{lastSeen .LastSeen}}</div>
+                    <div>
+                        {{range .Tags}}
+                        <span class="device-tag">[{{trimPrefix . "tag:"}}]</span>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+            </div>
+
+            <div class="spacer"></div>
+
+            <div id="policy-list">
+                <div class="policy-list-item" id="policy-list-header">
+                    <div>Source</div>
+                    <div>Destination</div>
+                    <div>Port</div>
+                    <div>Action</div>
+                </div>
+                {{range .Policy.ACLs}}
+                <div class="policy-list-item">
+                    <div>{{.Source}}</div>
+                    <div>{{.Destination}}</div>
+                    <div></div>
+                    <div>{{.Action}}</div>
+                </div>
+                {{end}}
+            </div>
+
+            <div class="spacer"></div>
+
+            <div id="policy-list">
+                <div class="policy-list-item" id="policy-list-header">
+                    <div>Source</div>
+                    <div>Destination</div>
+                    <div>Users</div>
+                    <div>Action</div>
+                </div>
+                {{range .Policy.SshACLs}}
+                <div class="policy-list-item">
+                    <div>{{.Source}}</div>
+                    <div>{{.Destination}}</div>
+                    <div>{{.Users}}</div>
+                    <div>{{.Action}}</div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
+{{end}}
+
+{{define "DeviceView"}}
+<!DOCTYPE html>
+<html>
+{{template "header"}}
+
+<body>
+    {{template "titlebar"}}
+    <div id="content">
+        <div id="sidebar">
+            {{template "sidebar"}}
+        </div>
+        <div>
+            {{template "device" .}}
+        </div>
+    </div>
+</body>
+
+</html>
+{{end}}

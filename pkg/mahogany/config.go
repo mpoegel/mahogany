@@ -18,6 +18,8 @@ type Config struct {
 	RegistryAddr      string
 	RegistryTimeout   time.Duration
 	TopologyFile      string
+	TailscaleAPIKey   string
+	TailnetName       string
 }
 
 func LoadConfig() Config {
@@ -33,6 +35,8 @@ func LoadConfig() Config {
 		RegistryAddr:      loadStrEnv("REGISTRY_ADDR", "localhost:5000"),
 		RegistryTimeout:   time.Duration(loadIntEnv("REGISTRY_TIMEOUT", 2)) * time.Second,
 		TopologyFile:      loadStrEnv("TOPOLOGY", "topology.toml"),
+		TailscaleAPIKey:   loadStrEnv("TAILSCALE_API_KEY", ""),
+		TailnetName:       loadStrEnv("TAILNET_NAME", ""),
 	}
 }
 

@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
+	"slices"
+	"strings"
 
 	types "github.com/docker/docker/api/types"
 	container "github.com/docker/docker/api/types/container"
+	"github.com/mpoegel/mahogany/pkg/vpn"
 )
 
 type IndexView struct {
@@ -64,10 +68,32 @@ type ActionResponseView struct {
 type WatchtowerView struct {
 }
 
+type ControlPlaneView struct {
+}
+
+type SettingsView struct {
+}
+
+type DevicesView struct {
+	Devices   []vpn.Device
+	Policy    *vpn.NetPolicy
+	IsSuccess bool
+	Err       error
+}
+
+type DeviceView struct {
+	Device       *vpn.Device
+	SourcePolicy *vpn.NetPolicy
+	DestPolicy   *vpn.NetPolicy
+	IsSuccess    bool
+	Err          error
+}
+
 type ViewFinder struct {
-	docker     DockerI
-	registry   RegistryI
-	watchtower WatchtowerI
+	docker       DockerI
+	registry     RegistryI
+	watchtower   WatchtowerI
+	deviceFinder vpn.VirtualNetworkClient
 }
 
 func NewViewFinder(config Config) (*ViewFinder, error) {
@@ -77,9 +103,10 @@ func NewViewFinder(config Config) (*ViewFinder, error) {
 	}
 
 	return &ViewFinder{
-		docker:     docker,
-		registry:   NewRegistry(config.RegistryAddr, config.RegistryTimeout),
-		watchtower: NewWatchtower(config.WatchtowerAddr, config.WatchtowerToken, config.WatchtowerTimeout),
+		docker:       docker,
+		registry:     NewRegistry(config.RegistryAddr, config.RegistryTimeout),
+		watchtower:   NewWatchtower(config.WatchtowerAddr, config.WatchtowerToken, config.WatchtowerTimeout),
+		deviceFinder: vpn.NewClient(config.TailscaleAPIKey, config.TailnetName),
 	}, nil
 }
 
@@ -212,4 +239,80 @@ func (v *ViewFinder) WatchtowerUpdate(ctx context.Context) *ActionResponseView {
 		view.Message = "Update complete"
 	}
 	return view
+}
+
+func (v *ViewFinder) GetControlPlane(ctx context.Context) (*ControlPlaneView, error) {
+	view := &ControlPlaneView{}
+	return view, nil
+}
+
+func (v *ViewFinder) GetSettings(ctx context.Context) (*SettingsView, error) {
+	view := &SettingsView{}
+	return view, nil
+}
+
+func (v *ViewFinder) GetDevices(ctx context.Context) (*DevicesView, error) {
+	view := &DevicesView{}
+	devices, err := v.deviceFinder.ListDevices(ctx)
+	if err != nil {
+		slog.Error("list devices failed", "err", err)
+		view.IsSuccess = false
+		view.Err = err
+		return view, nil
+	}
+	view.Devices = devices
+	policy, err := v.deviceFinder.GetACL(ctx)
+	if err != nil {
+		slog.Error("get policy failed", "err", err)
+		view.IsSuccess = false
+		view.Err = err
+		return view, nil
+	}
+	view.Policy = policy
+	return view, nil
+}
+
+func (v *ViewFinder) GetDevice(ctx context.Context, deviceID string) (*DeviceView, error) {
+	view := &DeviceView{}
+	device, err := v.deviceFinder.GetDevice(ctx, deviceID)
+	if err != nil {
+		slog.Error("get device failed", "err", err)
+		view.IsSuccess = false
+		view.Err = err
+		return view, nil
+	}
+	policy, err := v.deviceFinder.GetACL(ctx)
+	if err != nil {
+		slog.Error("get policy failed", "err", err)
+		view.IsSuccess = false
+		view.Err = err
+		return view, nil
+	}
+
+	sourceACL := vpn.NetPolicy{
+		ACLs: make([]vpn.ACL, 0),
+	}
+	for _, acl := range policy.ACLs {
+		for _, tag := range device.Tags {
+			if slices.Contains(acl.Source, tag) {
+				sourceACL.ACLs = append(sourceACL.ACLs, acl)
+			}
+		}
+	}
+
+	destACL := vpn.NetPolicy{
+		ACLs: make([]vpn.ACL, 0),
+	}
+	for _, acl := range policy.ACLs {
+		for _, tag := range device.Tags {
+			if slices.ContainsFunc(acl.Destination, func(dest string) bool { return strings.HasPrefix(dest, tag) }) {
+				destACL.ACLs = append(destACL.ACLs, acl)
+			}
+		}
+	}
+
+	view.Device = device
+	view.SourcePolicy = &sourceACL
+	view.DestPolicy = &destACL
+	return view, nil
 }

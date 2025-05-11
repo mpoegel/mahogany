@@ -1,0 +1,110 @@
+{{define "device"}}
+<div id="device">
+    <h2>Device: {{.Device.Name}}</h2>
+    <dl>
+        <dt>Address</dt>
+        <dd>{{.Device.Addresses}}</dd>
+
+        <dt>ID</dt>
+        <dd>{{.Device.Id}}</dd>
+
+        <dt>Node ID</dt>
+        <dd>{{.Device.NodeId}}</dd>
+
+        <dt>User</dt>
+        <dd>{{.Device.User}}</dd>
+
+        <dt>Hostname</dt>
+        <dd>{{.Device.Hostname}}</dd>
+
+        <dt>Client Version</dt>
+        <dd>
+            {{if .Device.IsUpdateAvailable}}&#x2191;{{end}}
+            {{.Device.ClientVersion}}
+        </dd>
+
+        <dt>OS</dt>
+        <dd>{{.Device.OS}}</dd>
+
+        <dt>Created</dt>
+        <dd>{{.Device.Created}}</dd>
+
+        <dt>Last Seen</dt>
+        <dd>{{lastSeen .Device.LastSeen}}</dd>
+
+        <dt>Key Expiry</dt>
+        <dd>{{.Device.IsKeyExpiryDisabled}}</dd>
+
+        <dt>ExpiresAt</dt>
+        <dd>{{.Device.ExpiresAt}}</dd>
+
+        <dt>IsAuthorized</dt>
+        <dd>{{.Device.IsAuthorized}}</dd>
+
+        <dt>IsExternal</dt>
+        <dd>{{.Device.IsExternal}}</dd>
+
+        <dt>MachineKey</dt>
+        <dd>{{.Device.MachineKey}}</dd>
+
+        <dt>NodeKey</dt>
+        <dd>{{.Device.NodeKey}}</dd>
+
+        <dt>BlocksIncomingConnections</dt>
+        <dd>{{.Device.BlocksIncomingConnections}}</dd>
+
+        <dt>TailnetLockKey</dt>
+        <dd>{{.Device.TailnetLockKey}}</dd>
+
+        <dt>TailnetLockError</dt>
+        <dd>
+            {{if .Device.TailnetLockError}}{{.Device.TailnetLockError}}{{else}}-{{end}}
+        </dd>
+
+        <dt>Tags</dt>
+        <dd>
+            {{range .Device.Tags}}
+            <span class="device-tag">[{{trimPrefix . "tag:"}}]</span>
+            {{end}}
+        </dd>
+    </dl>
+
+    <div class="spacer"></div>
+
+    <div id="policy-list">
+        <div class="policy-list-item" id="policy-list-header">
+            <div>Source</div>
+            <div>Destination</div>
+            <div>Port</div>
+            <div>Action</div>
+        </div>
+        {{range .SourcePolicy.ACLs}}
+        <div class="policy-list-item">
+            <div>{{.Source}}</div>
+            <div>{{.Destination}}</div>
+            <div></div>
+            <div>{{.Action}}</div>
+        </div>
+        {{end}}
+
+        <div class="spacer"></div>
+
+        <div id="policy-list">
+            <div class="policy-list-item" id="policy-list-header">
+                <div>Source</div>
+                <div>Destination</div>
+                <div>Port</div>
+                <div>Action</div>
+            </div>
+            {{range .DestPolicy.ACLs}}
+            <div class="policy-list-item">
+                <div>{{.Source}}</div>
+                <div>{{.Destination}}</div>
+                <div></div>
+                <div>{{.Action}}</div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+{{end}}
