@@ -47,6 +47,12 @@ func (a *Agent) Run(ctx context.Context) error {
 		return err
 	}
 
+	metrics, err := NewMetrics(10*time.Second, map[string]string{"hostname": a.config.HostName})
+	if err != nil {
+		return err
+	}
+	go metrics.Collect(ctx)
+
 	req := &schema.ReleaseStreamRequest{
 		Hostname: a.config.HostName,
 	}

@@ -41,16 +41,18 @@ func LoadConfig() Config {
 }
 
 type AgentConfig struct {
-	ServerAddr  string
-	HostName    string
-	DownloadDir string
+	ServerAddr        string
+	HostName          string
+	DownloadDir       string
+	TelemetryEndpoint string
 }
 
 func LoadAgentConfig() AgentConfig {
 	return AgentConfig{
-		ServerAddr:  loadStrEnv("SERVER_ADDR", "localhost:9091"),
-		HostName:    loadStrEnv("HOSTNAME", "mahogany"),
-		DownloadDir: loadStrEnv("DOWNLOAD_DIR", "/tmp"),
+		ServerAddr:        loadStrEnv("SERVER_ADDR", "localhost:9091"),
+		HostName:          loadStrEnv("HOSTNAME", "mahogany"),
+		DownloadDir:       loadStrEnv("DOWNLOAD_DIR", "/tmp"),
+		TelemetryEndpoint: loadStrEnv("TELEMETRY_ENDPOINT", "localhost:4317"),
 	}
 }
 

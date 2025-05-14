@@ -61,6 +61,14 @@ func RunAgent() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	otelShutdown, err := mahogany.SetupOTelSDK(ctx, config.TelemetryEndpoint)
+	if err != nil {
+		slog.Error("cannot setup otel", "err", err)
+		return
+	}
+	defer otelShutdown(ctx)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
