@@ -11,6 +11,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/mpoegel/mahogany/internal/db"
 )
 
 type Server struct {
@@ -55,6 +57,7 @@ func NewServer(config Config, updateServer *UpdateServer) (*Server, error) {
 	mux.HandleFunc("POST /github/webhook", s.HandleGithubWebHook)
 	mux.HandleFunc("GET /control-plane", s.HandleGetControlPlane)
 	mux.HandleFunc("GET /settings", s.HandleGetSettings)
+	mux.HandleFunc("POST /settings", s.HandlePostSettings)
 	mux.HandleFunc("GET /devices", s.HandleGetDevices)
 	mux.HandleFunc("GET /device/{deviceID}", s.HandleGetDevice)
 	mux.Handle("GET /static/", http.StripPrefix("/static", http.FileServer(http.Dir(config.StaticDir))))
@@ -321,6 +324,32 @@ func (s *Server) HandleGetSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if err = plate.ExecuteTemplate(w, "SettingsView", view); err != nil {
 		slog.Error("failed to execute settings template", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) HandlePostSettings(w http.ResponseWriter, r *http.Request) {
+	plate, err := loadTemplates(s.config.StaticDir)
+	if err != nil {
+		slog.Error("failed to load templates", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	params := db.UpdateSettingParams{
+		Name: r.URL.Query().Get("name"),
+	}
+	params.Value = r.FormValue(params.Name)
+	result := "saved"
+	if err = r.ParseForm(); err != nil {
+		result = "error"
+	}
+	if err = s.view.PostSettings(r.Context(), params); err != nil {
+		slog.Warn("failed to save settings update", "err", err, "setting", params)
+		result = err.Error()
+	}
+	slog.Info("posted settings", "setting", params)
+	if err = plate.ExecuteTemplate(w, "settings-toast", result); err != nil {
+		slog.Error("failed to execute settings-toast template", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }

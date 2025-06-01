@@ -7,36 +7,24 @@ import (
 )
 
 type Config struct {
-	StaticDir         string
-	Port              int
-	Timeout           time.Duration
-	DockerHost        string
-	DockerVersion     string
-	WatchtowerAddr    string
-	WatchtowerToken   string
-	WatchtowerTimeout time.Duration
-	RegistryAddr      string
-	RegistryTimeout   time.Duration
-	TopologyFile      string
-	TailscaleAPIKey   string
-	TailnetName       string
+	DbFile        string
+	StaticDir     string
+	Port          int
+	Timeout       time.Duration
+	DockerHost    string
+	DockerVersion string
+	TopologyFile  string
 }
 
 func LoadConfig() Config {
 	return Config{
-		StaticDir:         loadStrEnv("STATIC_DIR", "static"),
-		Port:              loadIntEnv("PORT", 9090),
-		Timeout:           time.Duration(loadIntEnv("TIMEOUT", 3)) * time.Second,
-		DockerHost:        loadStrEnv("DOCKER_HOST", "localhost"),
-		DockerVersion:     loadStrEnv("DOCKER_VERSION", "3"),
-		WatchtowerAddr:    loadStrEnv("WATCHTOWER_ADDR", "localhost:8080"),
-		WatchtowerToken:   loadStrEnv("WATCHTOWER_TOKEN", ""),
-		WatchtowerTimeout: time.Duration(loadIntEnv("WATCHTOWER_TIMEOUT", 2)) * time.Second,
-		RegistryAddr:      loadStrEnv("REGISTRY_ADDR", "localhost:5000"),
-		RegistryTimeout:   time.Duration(loadIntEnv("REGISTRY_TIMEOUT", 2)) * time.Second,
-		TopologyFile:      loadStrEnv("TOPOLOGY", "topology.toml"),
-		TailscaleAPIKey:   loadStrEnv("TAILSCALE_API_KEY", ""),
-		TailnetName:       loadStrEnv("TAILNET_NAME", ""),
+		DbFile:        loadStrEnv("DB_FILE", "mahogany.db"),
+		StaticDir:     loadStrEnv("STATIC_DIR", "static"),
+		Port:          loadIntEnv("PORT", 9090),
+		Timeout:       time.Duration(loadIntEnv("TIMEOUT", 3)) * time.Second,
+		DockerHost:    loadStrEnv("DOCKER_HOST", "localhost"),
+		DockerVersion: loadStrEnv("DOCKER_VERSION", "3"),
+		TopologyFile:  loadStrEnv("TOPOLOGY", "topology.toml"),
 	}
 }
 

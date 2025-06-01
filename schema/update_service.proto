@@ -8,6 +8,7 @@ import "google/protobuf/timestamp.proto";
 service UpdateService {
     rpc RegisterManifest(RegisterManifestRequest) returns (RegisterManifestResponse);
     rpc ReleaseStream(ReleaseStreamRequest) returns (stream ReleaseStreamResponse);
+    rpc AssetStatusStream(stream AssetStatusStreamRequest) returns (AssetStatusStreamResponse);
 }
 
 message RegisterManifestRequest {
@@ -26,6 +27,14 @@ message ReleaseStreamRequest {
 message ReleaseStreamResponse {
     Release release = 1;
     google.protobuf.Timestamp timestamp = 2;
+}
+
+message AssetStatusStreamRequest {
+
+}
+
+message AssetStatusStreamResponse {
+
 }
 
 message Release {

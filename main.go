@@ -1,6 +1,7 @@
 package main
 
 //go:generate protoc -I=./schema --go_out=./pkg/schema --go_opt=paths=source_relative --go-grpc_out=./pkg/schema --go-grpc_opt=paths=source_relative ./schema/update_service.proto
+//go:generate sqlc generate
 
 import (
 	"context"

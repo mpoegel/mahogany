@@ -2,15 +2,19 @@ package mahogany
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"log/slog"
 	"slices"
 	"strings"
+	"time"
 
 	types "github.com/docker/docker/api/types"
 	container "github.com/docker/docker/api/types/container"
-	"github.com/mpoegel/mahogany/pkg/vpn"
+	db "github.com/mpoegel/mahogany/internal/db"
+	vpn "github.com/mpoegel/mahogany/pkg/vpn"
+	_ "modernc.org/sqlite"
 )
 
 type IndexView struct {
@@ -72,6 +76,13 @@ type ControlPlaneView struct {
 }
 
 type SettingsView struct {
+	WatchtowerAddr    string
+	WatchtowerToken   string
+	WatchtowerTimeout string
+	RegistryAddr      string
+	RegistryTimeout   string
+	TailscaleApiKey   string
+	TailnetName       string
 }
 
 type DevicesView struct {
@@ -94,6 +105,8 @@ type ViewFinder struct {
 	registry     RegistryI
 	watchtower   WatchtowerI
 	deviceFinder vpn.VirtualNetworkClient
+	db           *sql.DB
+	query        *db.Queries
 }
 
 func NewViewFinder(config Config) (*ViewFinder, error) {
@@ -102,12 +115,51 @@ func NewViewFinder(config Config) (*ViewFinder, error) {
 		return nil, err
 	}
 
-	return &ViewFinder{
-		docker:       docker,
-		registry:     NewRegistry(config.RegistryAddr, config.RegistryTimeout),
-		watchtower:   NewWatchtower(config.WatchtowerAddr, config.WatchtowerToken, config.WatchtowerTimeout),
-		deviceFinder: vpn.NewClient(config.TailscaleAPIKey, config.TailnetName),
-	}, nil
+	dbConn, err := sql.Open("sqlite", config.DbFile)
+	if err != nil {
+		return nil, err
+	}
+
+	vf := &ViewFinder{
+		docker: docker,
+		db:     dbConn,
+		query:  db.New(dbConn),
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	if err := vf.reload(ctx, vf.query); err != nil {
+		return nil, err
+	}
+
+	return vf, nil
+}
+
+func (v *ViewFinder) reload(ctx context.Context, query *db.Queries) error {
+	if query == nil {
+		query = v.query
+	}
+	registryTimeout, err := time.ParseDuration(v.getSetting(ctx, query, "RegistryTimeout"))
+	if err != nil {
+		return err
+	}
+	watchtowerTimeout, err := time.ParseDuration(v.getSetting(ctx, query, "WatchtowerTimeout"))
+	if err != nil {
+		return err
+	}
+
+	v.registry = NewRegistry(v.getSetting(ctx, query, "RegistryAddr"), registryTimeout)
+	v.watchtower = NewWatchtower(v.getSetting(ctx, query, "WatchtowerAddr"), v.getSetting(ctx, query, "WatchtowerToken"), watchtowerTimeout)
+	v.deviceFinder = vpn.NewClient(v.getSetting(ctx, query, "TailscaleApiKey"), v.getSetting(ctx, query, "TailnetName"))
+
+	return nil
+}
+
+func (v *ViewFinder) getSetting(ctx context.Context, query *db.Queries, name string) string {
+	row, err := query.GetSetting(ctx, name)
+	if err != nil {
+		slog.Warn("failed to get setting", "err", err, "name", name)
+	}
+	return row.Value
 }
 
 func (v *ViewFinder) GetIndex(ctx context.Context) (*IndexView, error) {
@@ -247,8 +299,34 @@ func (v *ViewFinder) GetControlPlane(ctx context.Context) (*ControlPlaneView, er
 }
 
 func (v *ViewFinder) GetSettings(ctx context.Context) (*SettingsView, error) {
-	view := &SettingsView{}
+	view := &SettingsView{
+		WatchtowerAddr:    v.getSetting(ctx, v.query, "WatchtowerAddr"),
+		WatchtowerToken:   v.getSetting(ctx, v.query, "WatchtowerToken"),
+		WatchtowerTimeout: v.getSetting(ctx, v.query, "WatchtowerTimeout"),
+		RegistryAddr:      v.getSetting(ctx, v.query, "RegistryAddr"),
+		RegistryTimeout:   v.getSetting(ctx, v.query, "RegistryTimeout"),
+		TailscaleApiKey:   v.getSetting(ctx, v.query, "TailscaleApiKey"),
+		TailnetName:       v.getSetting(ctx, v.query, "TailnetName"),
+	}
 	return view, nil
+}
+
+func (v *ViewFinder) PostSettings(ctx context.Context, params db.UpdateSettingParams) error {
+	tx, err := v.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	query := v.query.WithTx(tx)
+	if err := query.UpdateSetting(ctx, params); err != nil {
+		return err
+	}
+	if err = v.reload(ctx, query); err != nil {
+		if err := tx.Rollback(); err != nil {
+			slog.Warn("failed to rollback settings transaction", "err", err)
+		}
+		return err
+	}
+	return tx.Commit()
 }
 
 func (v *ViewFinder) GetDevices(ctx context.Context) (*DevicesView, error) {
