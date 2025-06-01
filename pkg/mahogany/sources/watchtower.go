@@ -1,4 +1,4 @@
-package mahogany
+package sources
 
 import (
 	"context"

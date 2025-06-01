@@ -12,19 +12,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mpoegel/mahogany/internal/db"
+	db "github.com/mpoegel/mahogany/internal/db"
+	views "github.com/mpoegel/mahogany/pkg/mahogany/views"
 )
 
 type Server struct {
 	config       Config
-	view         *ViewFinder
+	view         *views.ViewFinder
 	httpServer   *http.Server
 	updateServer *UpdateServer
 }
 
 func NewServer(config Config, updateServer *UpdateServer) (*Server, error) {
 	mux := http.NewServeMux()
-	viewFinder, err := NewViewFinder(config)
+	viewFinder, err := views.NewViewFinder(config.DockerHost, config.DockerVersion, config.DbFile)
 	if err != nil {
 		return nil, err
 	}
@@ -60,6 +61,9 @@ func NewServer(config Config, updateServer *UpdateServer) (*Server, error) {
 	mux.HandleFunc("POST /settings", s.HandlePostSettings)
 	mux.HandleFunc("GET /devices", s.HandleGetDevices)
 	mux.HandleFunc("GET /device/{deviceID}", s.HandleGetDevice)
+	mux.HandleFunc("GET /packages", s.HandleGetPackages)
+	mux.HandleFunc("POST /package/{ID}", s.HandlePostPackage)
+	mux.HandleFunc("DELETE /package/{ID}", s.HandleDeletePackage)
 	mux.Handle("GET /static/", http.StripPrefix("/static", http.FileServer(http.Dir(config.StaticDir))))
 
 	slog.Info("loaded mux", "routes", mux)
@@ -386,6 +390,18 @@ func (s *Server) HandleGetDevice(w http.ResponseWriter, r *http.Request) {
 		slog.Error("failed to execute device template", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+}
+
+func (s *Server) HandleGetPackages(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (s *Server) HandlePostPackage(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (s *Server) HandleDeletePackage(w http.ResponseWriter, r *http.Request) {
+
 }
 
 func loadTemplates(baseDir string) (plate *template.Template, err error) {

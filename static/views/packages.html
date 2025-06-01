@@ -1,0 +1,24 @@
+{{define "PackagesView"}}
+<!DOCTYPE html>
+<html>
+
+{{template "header"}}
+
+<body>
+    {{template "titlebar"}}
+    <div id="content">
+        <div id="sidebar">
+            {{template "sidebar"}}
+        </div>
+        <div id="packages">
+            {{if .IsSuccess}}
+            <p>Packages</p>
+            {{else}}
+            <p>Error: {{.Err}}</p>
+            {{end}}
+        </div>
+    </div>
+</body>
+
+</html>
+{{end}}
