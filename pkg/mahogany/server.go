@@ -3,6 +3,7 @@ package mahogany
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -62,7 +63,8 @@ func NewServer(config Config, updateServer *UpdateServer) (*Server, error) {
 	mux.HandleFunc("GET /devices", s.HandleGetDevices)
 	mux.HandleFunc("GET /device/{deviceID}", s.HandleGetDevice)
 	mux.HandleFunc("GET /packages", s.HandleGetPackages)
-	mux.HandleFunc("POST /package/{ID}", s.HandlePostPackage)
+	mux.HandleFunc("POST /package", s.HandlePostPackage)
+	mux.HandleFunc("POST /package/{ID...}", s.HandlePostPackage)
 	mux.HandleFunc("DELETE /package/{ID}", s.HandleDeletePackage)
 	mux.Handle("GET /static/", http.StripPrefix("/static", http.FileServer(http.Dir(config.StaticDir))))
 
@@ -393,15 +395,65 @@ func (s *Server) HandleGetDevice(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HandleGetPackages(w http.ResponseWriter, r *http.Request) {
-
+	plate, err := loadTemplates(s.config.StaticDir)
+	if err != nil {
+		slog.Error("failed to load templates", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	view, err := s.view.GetPackages(r.Context())
+	if err != nil {
+		slog.Error("failed to get packages view", "err", err)
+	}
+	if err = plate.ExecuteTemplate(w, "PackagesView", view); err != nil {
+		slog.Error("failed to execute packages template", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func (s *Server) HandlePostPackage(w http.ResponseWriter, r *http.Request) {
+	plate, err := loadTemplates(s.config.StaticDir)
+	if err != nil {
+		slog.Error("failed to load templates", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
+	params := db.AddPackageParams{
+		Name:       r.FormValue("Name"),
+		InstallCmd: r.FormValue("InstallCmd"),
+		UpdateCmd:  r.FormValue("UpdateCmd"),
+		RemoveCmd: sql.NullString{
+			String: r.FormValue("RemoveCmd"),
+			Valid:  len(r.FormValue("RemoveCmd")) > 0,
+		},
+	}
+
+	view, err := s.view.AddPackage(r.Context(), params)
+	if err != nil {
+		slog.Error("failed to get add package view", "err", err)
+	}
+	if err = plate.ExecuteTemplate(w, "packages-content", view); err != nil {
+		slog.Error("failed to execute packages template", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func (s *Server) HandleDeletePackage(w http.ResponseWriter, r *http.Request) {
-
+	plate, err := loadTemplates(s.config.StaticDir)
+	if err != nil {
+		slog.Error("failed to load templates", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	view, err := s.view.DeletePackage(r.Context(), r.PathValue("ID"))
+	if err != nil {
+		slog.Error("failed to get delete packages view", "err", err)
+	}
+	if err = plate.ExecuteTemplate(w, "packages-content", view); err != nil {
+		slog.Error("failed to execute packages template", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func loadTemplates(baseDir string) (plate *template.Template, err error) {

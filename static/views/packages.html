@@ -11,11 +11,7 @@
             {{template "sidebar"}}
         </div>
         <div id="packages">
-            {{if .IsSuccess}}
-            <p>Packages</p>
-            {{else}}
-            <p>Error: {{.Err}}</p>
-            {{end}}
+            {{template "packages-content" .}}
         </div>
     </div>
 </body>

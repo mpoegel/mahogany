@@ -75,7 +75,8 @@ a {
 #container-list-header,
 #manifest-list-header,
 #devices-list-header,
-#policy-list-header {
+#policy-list-header,
+#packages-list-header {
     font-weight: bold;
     border-bottom: 1px solid black;
 }
@@ -83,7 +84,8 @@ a {
 .container-list-item,
 .manifest-list-item,
 .devices-list-item,
-.policy-list-item {
+.policy-list-item,
+.packages-list-item {
     display: flex;
     justify-content: space-between;
 }
@@ -92,14 +94,16 @@ a {
 .container-list-item:not(:first-child):hover,
 .manifest-list-item:not(:first-child):hover,
 .devices-list-item:not(:first-child):hover,
-.policy-list-item:not(:first-child):hover {
+.policy-list-item:not(:first-child):hover,
+.packages-list-item:not(:first-child):hover {
     background-color: rgb(145, 35, 35);
 }
 
 .container-list-item div,
 .manifest-list-item div,
 .devices-list-item div,
-.policy-list-item div {
+.policy-list-item div,
+.packages-list-item div {
     flex: 1;
     border-right: 1px solid black;
     padding: 2px 10px;
@@ -108,7 +112,8 @@ a {
 .container-list-item div:last-child,
 .manifest-list-item div:last-child,
 .devices-list-item div:last-child,
-.policy-list-item div:last-child {
+.policy-list-item div:last-child,
+.packages-list-item div:last-child {
     border-right: none;
 }
 
@@ -121,7 +126,8 @@ a {
 }
 
 .container-action,
-.manifest-action {
+.manifest-action,
+.package-action {
     cursor: pointer;
     text-decoration: underline;
 }
@@ -144,17 +150,20 @@ a {
     height: 25px;
 }
 
-#settings {
+#settings,
+.basic-form {
     display: flex;
     flex-direction: column;
 }
 
-.setting {
+.setting,
+.basic-form-item {
     display: flex;
     flex-direction: row;
 }
 
-.setting label {
+.setting label,
+.basic-form-item label {
     width: 200px;
 }
 

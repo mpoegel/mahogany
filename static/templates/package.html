@@ -1,0 +1,52 @@
+{{define "packages-content"}}
+{{if .IsSuccess}}
+<div id="packages-list">
+    <div class="packages-list-item" id="packages-list-header">
+        <div>Package</div>
+        <div>Install Command</div>
+        <div>Update Command</div>
+        <div>Remove Command</div>
+        <div>Action</div>
+    </div>
+    {{range .Packages}}
+    <div class="packages-list-item">
+        <div>{{.Name}}</div>
+        <div>{{.InstallCmd}}</div>
+        <div>{{.UpdateCmd}}</div>
+        <div>{{if .RemoveCmd.Valid}}{{.RemoveCmd.String}}{{end}}</div>
+        <div>
+            <div class="package-action" hx-delete="/package/{{.ID}}" hx-target="#packages">X</div>
+        </div>
+    </div>
+    {{end}}
+</div>
+<div class="spacer"></div>
+<h3>New Package</h3>
+<div id="add-package-form" class="basic-form">
+    <div class="basic-form-item">
+        <label for="Name">Package Name</label>
+        <input type="text" name="Name" value="{{.AddPackage.Name}}">
+    </div>
+    <div class="basic-form-item">
+        <label for="InstallCmd">Install Command</label>
+        <textarea cols="50" rows="3" spellcheck="false" name="InstallCmd" value="{{.AddPackage.InstallCmd}}"></textarea>
+    </div>
+    <div class="basic-form-item">
+        <label for="UpdateCmd">Update Command</label>
+        <textarea cols="50" rows="3" spellcheck="false" name="UpdateCmd" value="{{.AddPackage.UpdateCmd}}"></textarea>
+    </div>
+    <div class="basic-form-item">
+        <label for="RemoveCmd">Remove Command</label>
+        <textarea cols="50" rows="3" spellcheck="false" name="RemoveCmd" value="{{.AddPackage.RemoveCmd}}"></textarea>
+    </div>
+</div>
+<div class="spacer"></div>
+<div class="btn-save">
+    <button class="btn" hx-post="/package" hx-target="#packages" hx-include="#add-package-form">Add</button>
+</div>
+<div id="toast" class="htmx-swapping">{{.Toast}}</div>
+
+{{else}}
+<p>Error: {{.Err}}</p>
+{{end}}
+{{end}}
