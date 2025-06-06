@@ -3,6 +3,7 @@ package views
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"time"
 
 	container "github.com/docker/docker/api/types/container"
@@ -16,10 +17,14 @@ type IndexView struct {
 	Containers []container.Summary
 }
 
+func (v *IndexView) Name() string { return "IndexView" }
+
 type ActionResponseView struct {
 	IsSuccess bool
 	Message   string
 }
+
+func (v *ActionResponseView) Name() string { return "toast" }
 
 type ViewFinder struct {
 	docker       sources.DockerI
@@ -55,15 +60,16 @@ func NewViewFinder(dockerHost, dockerVersion, dbFile string) (*ViewFinder, error
 	return vf, nil
 }
 
-func (v *ViewFinder) GetIndex(ctx context.Context) (*IndexView, error) {
+func (v *ViewFinder) GetIndex(ctx context.Context) *IndexView {
+	view := &IndexView{}
 	opts := container.ListOptions{
 		All: true,
 	}
 	containerList, err := v.docker.ContainerList(ctx, opts)
 	if err != nil {
-		return nil, err
+		slog.Error("failed to get docker container list", "err", err)
+	} else {
+		view.Containers = containerList
 	}
-	return &IndexView{
-		Containers: containerList,
-	}, nil
+	return view
 }

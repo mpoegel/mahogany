@@ -20,6 +20,8 @@ type SettingsView struct {
 	TailnetName       string
 }
 
+func (v *SettingsView) Name() string { return "SettingsView" }
+
 func (v *ViewFinder) reload(ctx context.Context, query *db.Queries) error {
 	if query == nil {
 		query = v.query
@@ -48,7 +50,7 @@ func (v *ViewFinder) getSetting(ctx context.Context, query *db.Queries, name str
 	return row.Value
 }
 
-func (v *ViewFinder) GetSettings(ctx context.Context) (*SettingsView, error) {
+func (v *ViewFinder) GetSettings(ctx context.Context) *SettingsView {
 	view := &SettingsView{
 		WatchtowerAddr:    v.getSetting(ctx, v.query, "WatchtowerAddr"),
 		WatchtowerToken:   v.getSetting(ctx, v.query, "WatchtowerToken"),
@@ -58,7 +60,7 @@ func (v *ViewFinder) GetSettings(ctx context.Context) (*SettingsView, error) {
 		TailscaleApiKey:   v.getSetting(ctx, v.query, "TailscaleApiKey"),
 		TailnetName:       v.getSetting(ctx, v.query, "TailnetName"),
 	}
-	return view, nil
+	return view
 }
 
 func (v *ViewFinder) PostSettings(ctx context.Context, params db.UpdateSettingParams) error {

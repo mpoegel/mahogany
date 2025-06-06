@@ -43,29 +43,76 @@ func NewServer(config Config, updateServer *UpdateServer) (*Server, error) {
 		updateServer: updateServer,
 	}
 
-	mux.HandleFunc("GET /{$}", s.HandleIndex)
-	mux.HandleFunc("GET /container/{containerID}", s.HandleContainer)
-	mux.HandleFunc("GET /container/{containerID}/inspect", s.HandleContainerInspect)
-	mux.HandleFunc("POST /container/{containerID}/start", s.HandleContainerStart)
-	mux.HandleFunc("POST /container/{containerID}/stop", s.HandleContainerStop)
-	mux.HandleFunc("POST /container/{containerID}/restart", s.HandleContainerRestart)
-	mux.HandleFunc("DELETE /container/{containerID}/delete", s.HandleContainerDelete)
-	mux.HandleFunc("GET /container/{containerID}/logs", s.HandleContainerLogs)
+	mux.HandleFunc("GET /{$}", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.GetIndex(r.Context())
+	}))
+	mux.HandleFunc("GET /container/{containerID}", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.GetContainer(r.Context(), r.PathValue("containerID")).WithName("ContainerView")
+	}))
+	mux.HandleFunc("GET /container/{containerID}/inspect", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.GetContainer(r.Context(), r.PathValue("containerID")).WithName("container")
+	}))
+	mux.HandleFunc("POST /container/{containerID}/start", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.StartContainer(r.Context(), r.PathValue("containerID"))
+	}))
+	mux.HandleFunc("POST /container/{containerID}/stop", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.StopContainer(r.Context(), r.PathValue("containerID"))
+	}))
+	mux.HandleFunc("POST /container/{containerID}/restart", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.RestartContainer(r.Context(), r.PathValue("containerID"))
+	}))
+	mux.HandleFunc("DELETE /container/{containerID}/delete", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.RemoveContainer(r.Context(), r.PathValue("containerID"))
+	}))
+	mux.HandleFunc("GET /container/{containerID}/logs", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.GetContainer(r.Context(), r.PathValue("containerID")).WithName("container-logs")
+	}))
 	mux.HandleFunc("GET /container/{containerID}/logs/stream", s.HandleContainerLogsStream)
-	mux.HandleFunc("GET /registry", s.HandleRegistry)
-	mux.HandleFunc("DELETE /registry/image/{repository}/{digest}", s.HandleRegistryImageDelete)
-	mux.HandleFunc("GET /watchtower", s.HandleWatchtower)
-	mux.HandleFunc("POST /watchtower/update", s.HandleWatchtowerUpdate)
+	mux.HandleFunc("GET /registry", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.GetRegistry(r.Context())
+	}))
+	mux.HandleFunc("DELETE /registry/image/{repository}/{digest}", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.DeleteRegistryImage(r.Context(), r.PathValue("repository"), r.PathValue("digest"))
+	}))
+	mux.HandleFunc("GET /watchtower", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.GetWatchtower(r.Context())
+	}))
+	mux.HandleFunc("POST /watchtower/update", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.WatchtowerUpdate(r.Context())
+	}))
 	mux.HandleFunc("POST /github/webhook", s.HandleGithubWebHook)
-	mux.HandleFunc("GET /control-plane", s.HandleGetControlPlane)
-	mux.HandleFunc("GET /settings", s.HandleGetSettings)
+	mux.HandleFunc("GET /control-plane", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.GetControlPlane(r.Context())
+	}))
+	mux.HandleFunc("GET /settings", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.GetSettings(r.Context())
+	}))
 	mux.HandleFunc("POST /settings", s.HandlePostSettings)
-	mux.HandleFunc("GET /devices", s.HandleGetDevices)
-	mux.HandleFunc("GET /device/{deviceID}", s.HandleGetDevice)
-	mux.HandleFunc("GET /packages", s.HandleGetPackages)
-	mux.HandleFunc("POST /package", s.HandlePostPackage)
-	mux.HandleFunc("POST /package/{ID...}", s.HandlePostPackage)
-	mux.HandleFunc("DELETE /package/{ID}", s.HandleDeletePackage)
+	mux.HandleFunc("GET /devices", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.GetDevices(r.Context())
+	}))
+	mux.HandleFunc("GET /device/{deviceID}", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.GetDevice(r.Context(), r.PathValue("deviceID"))
+	}))
+	mux.HandleFunc("GET /packages", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.GetPackages(r.Context()).WithName("PackagesView")
+	}))
+	mux.HandleFunc("POST /package", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.AddPackage(r.Context(), db.AddPackageParams{
+			Name:       r.FormValue("Name"),
+			InstallCmd: r.FormValue("InstallCmd"),
+			UpdateCmd:  r.FormValue("UpdateCmd"),
+			RemoveCmd: sql.NullString{
+				String: r.FormValue("RemoveCmd"),
+				Valid:  len(r.FormValue("RemoveCmd")) > 0,
+			},
+		}).WithName("packages-content")
+	}))
+	// TODO edit package
+	// mux.HandleFunc("POST /package/{ID...}", s.HandlePostPackage)
+	mux.HandleFunc("DELETE /package/{ID}", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.DeletePackage(r.Context(), r.PathValue("ID")).WithName("packages-content")
+	}))
 	mux.Handle("GET /static/", http.StripPrefix("/static", http.FileServer(http.Dir(config.StaticDir))))
 
 	slog.Info("loaded mux", "routes", mux)
@@ -84,161 +131,6 @@ func (s *Server) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), s.config.Timeout)
 	defer cancel()
 	s.httpServer.Shutdown(ctx)
-}
-
-func (s *Server) HandleIndex(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, err := s.view.GetIndex(r.Context())
-	if err != nil {
-		slog.Error("failed to get index view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "IndexView", view); err != nil {
-		slog.Error("failed to execute index template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleContainer(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, err := s.view.GetContainer(r.Context(), r.PathValue("containerID"))
-	if err != nil {
-		slog.Error("failed to get container view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "ContainerView", view); err != nil {
-		slog.Error("failed to execute container template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleRegistry(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, err := s.view.GetRegistry(r.Context())
-	if err != nil {
-		slog.Error("failed to get registry view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "RegistryView", view); err != nil {
-		slog.Error("failed to execute registry template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleWatchtower(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, err := s.view.GetWatchtower(r.Context())
-	if err != nil {
-		slog.Error("failed to get watchtower view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "WatchtowerView", view); err != nil {
-		slog.Error("failed to execute watchtower template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleContainerInspect(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, err := s.view.GetContainer(r.Context(), r.PathValue("containerID"))
-	if err != nil {
-		slog.Error("failed to get container view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "container", view); err != nil {
-		slog.Error("failed to execute container template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleContainerStart(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, _ := s.view.StartContainer(r.Context(), r.PathValue("containerID"))
-	if err = plate.ExecuteTemplate(w, "container-start", view); err != nil {
-		slog.Error("failed to execute container start template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleContainerStop(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, _ := s.view.StopContainer(r.Context(), r.PathValue("containerID"))
-	if err = plate.ExecuteTemplate(w, "container-stop", view); err != nil {
-		slog.Error("failed to execute container stop template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleContainerRestart(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, _ := s.view.RestartContainer(r.Context(), r.PathValue("containerID"))
-	if err = plate.ExecuteTemplate(w, "container-restart", view); err != nil {
-		slog.Error("failed to execute container restart template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleContainerDelete(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, _ := s.view.RemoveContainer(r.Context(), r.PathValue("containerID"))
-	if err = plate.ExecuteTemplate(w, "container-delete", view); err != nil {
-		slog.Error("failed to execute container delete template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleContainerLogs(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, _ := s.view.GetContainer(r.Context(), r.PathValue("containerID"))
-	if err = plate.ExecuteTemplate(w, "container-logs", view); err != nil {
-		slog.Error("failed to execute container logs template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
 }
 
 func (s *Server) HandleContainerLogsStream(w http.ResponseWriter, r *http.Request) {
@@ -260,34 +152,6 @@ func (s *Server) HandleContainerLogsStream(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (s *Server) HandleRegistryImageDelete(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, _ := s.view.DeleteRegistryImage(r.Context(), r.PathValue("repository"), r.PathValue("digest"))
-	if err = plate.ExecuteTemplate(w, "toast", view); err != nil {
-		slog.Error("failed to execute toast template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleWatchtowerUpdate(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view := s.view.WatchtowerUpdate(r.Context())
-	if err = plate.ExecuteTemplate(w, "toast", view); err != nil {
-		slog.Error("failed to execute toast template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
 func (s *Server) HandleGithubWebHook(w http.ResponseWriter, r *http.Request) {
 	var event GithubReleaseEvent
 	decoder := json.NewDecoder(r.Body)
@@ -298,40 +162,6 @@ func (s *Server) HandleGithubWebHook(w http.ResponseWriter, r *http.Request) {
 	// TODO check github signature
 	slog.Info("received github webhook", "name", *event.Repo.Name)
 	s.updateServer.PropagateGithubRelease(&event)
-}
-
-func (s *Server) HandleGetControlPlane(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, err := s.view.GetControlPlane(r.Context())
-	if err != nil {
-		slog.Error("failed to get control plane view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "ControlPlaneView", view); err != nil {
-		slog.Error("failed to execute control plane template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleGetSettings(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, err := s.view.GetSettings(r.Context())
-	if err != nil {
-		slog.Error("failed to get settings view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "SettingsView", view); err != nil {
-		slog.Error("failed to execute settings template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
 }
 
 func (s *Server) HandlePostSettings(w http.ResponseWriter, r *http.Request) {
@@ -360,99 +190,28 @@ func (s *Server) HandlePostSettings(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) HandleGetDevices(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, err := s.view.GetDevices(r.Context())
-	if err != nil {
-		slog.Error("failed to get devices view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "DevicesView", view); err != nil {
-		slog.Error("failed to execute devices template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
+type Viewer interface {
+	Name() string
 }
 
-func (s *Server) HandleGetDevice(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, err := s.view.GetDevice(r.Context(), r.PathValue("deviceID"))
-	if err != nil {
-		slog.Error("failed to get device view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "DeviceView", view); err != nil {
-		slog.Error("failed to execute device template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleGetPackages(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, err := s.view.GetPackages(r.Context())
-	if err != nil {
-		slog.Error("failed to get packages view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "PackagesView", view); err != nil {
-		slog.Error("failed to execute packages template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandlePostPackage(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	params := db.AddPackageParams{
-		Name:       r.FormValue("Name"),
-		InstallCmd: r.FormValue("InstallCmd"),
-		UpdateCmd:  r.FormValue("UpdateCmd"),
-		RemoveCmd: sql.NullString{
-			String: r.FormValue("RemoveCmd"),
-			Valid:  len(r.FormValue("RemoveCmd")) > 0,
-		},
-	}
-
-	view, err := s.view.AddPackage(r.Context(), params)
-	if err != nil {
-		slog.Error("failed to get add package view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "packages-content", view); err != nil {
-		slog.Error("failed to execute packages template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func (s *Server) HandleDeletePackage(w http.ResponseWriter, r *http.Request) {
-	plate, err := loadTemplates(s.config.StaticDir)
-	if err != nil {
-		slog.Error("failed to load templates", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	view, err := s.view.DeletePackage(r.Context(), r.PathValue("ID"))
-	if err != nil {
-		slog.Error("failed to get delete packages view", "err", err)
-	}
-	if err = plate.ExecuteTemplate(w, "packages-content", view); err != nil {
-		slog.Error("failed to execute packages template", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
+func (s *Server) newHandler(viewFunc func(r *http.Request) Viewer) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		plate, err := loadTemplates(s.config.StaticDir)
+		if err != nil {
+			slog.Error("failed to load templates", "err", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		view := viewFunc(r)
+		if view == nil {
+			slog.Error("view finder did not return a view", "method", r.Method, "path", r.URL.Path)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if err = plate.ExecuteTemplate(w, view.Name(), view); err != nil {
+			slog.Error("failed to execute template", "err", err, "name", view.Name())
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 	}
 }
 

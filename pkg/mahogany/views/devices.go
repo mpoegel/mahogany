@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/mpoegel/mahogany/internal/db"
 	"github.com/mpoegel/mahogany/pkg/vpn"
 )
 
@@ -16,22 +17,33 @@ type DevicesView struct {
 	Err       error
 }
 
+func (v *DevicesView) Name() string { return "DevicesView" }
+
 type DeviceView struct {
 	Device       *vpn.Device
 	SourcePolicy *vpn.NetPolicy
 	DestPolicy   *vpn.NetPolicy
+	Assets       []DeviceAsset
+	AllPackages  []db.Package
 	IsSuccess    bool
 	Err          error
 }
 
-func (v *ViewFinder) GetDevices(ctx context.Context) (*DevicesView, error) {
+func (v *DeviceView) Name() string { return "DeviceView" }
+
+type DeviceAsset struct {
+	Name    string
+	Version string
+}
+
+func (v *ViewFinder) GetDevices(ctx context.Context) *DevicesView {
 	view := &DevicesView{}
 	devices, err := v.deviceFinder.ListDevices(ctx)
 	if err != nil {
 		slog.Error("list devices failed", "err", err)
 		view.IsSuccess = false
 		view.Err = err
-		return view, nil
+		return view
 	}
 	view.Devices = devices
 	policy, err := v.deviceFinder.GetACL(ctx)
@@ -39,27 +51,27 @@ func (v *ViewFinder) GetDevices(ctx context.Context) (*DevicesView, error) {
 		slog.Error("get policy failed", "err", err)
 		view.IsSuccess = false
 		view.Err = err
-		return view, nil
+		return view
 	}
 	view.Policy = policy
-	return view, nil
+	return view
 }
 
-func (v *ViewFinder) GetDevice(ctx context.Context, deviceID string) (*DeviceView, error) {
+func (v *ViewFinder) GetDevice(ctx context.Context, deviceID string) *DeviceView {
 	view := &DeviceView{}
 	device, err := v.deviceFinder.GetDevice(ctx, deviceID)
 	if err != nil {
 		slog.Error("get device failed", "err", err)
 		view.IsSuccess = false
 		view.Err = err
-		return view, nil
+		return view
 	}
 	policy, err := v.deviceFinder.GetACL(ctx)
 	if err != nil {
 		slog.Error("get policy failed", "err", err)
 		view.IsSuccess = false
 		view.Err = err
-		return view, nil
+		return view
 	}
 
 	sourceACL := vpn.NetPolicy{
@@ -87,5 +99,13 @@ func (v *ViewFinder) GetDevice(ctx context.Context, deviceID string) (*DeviceVie
 	view.Device = device
 	view.SourcePolicy = &sourceACL
 	view.DestPolicy = &destACL
-	return view, nil
+
+	packages, err := v.query.ListPackages(ctx)
+	if err != nil {
+		slog.Error("list packages failed", "err", err)
+		return view
+	}
+	view.AllPackages = packages
+
+	return view
 }

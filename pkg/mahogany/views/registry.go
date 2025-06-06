@@ -3,6 +3,7 @@ package views
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	sources "github.com/mpoegel/mahogany/pkg/mahogany/sources"
 )
@@ -13,36 +14,41 @@ type RegistryView struct {
 	Err       error
 }
 
-func (v *ViewFinder) GetRegistry(ctx context.Context) (*RegistryView, error) {
+func (v *RegistryView) Name() string { return "RegistryView" }
+
+func (v *ViewFinder) GetRegistry(ctx context.Context) *RegistryView {
 	view := &RegistryView{
 		Manifests: make([]sources.RegistryManifest, 0),
 		IsSuccess: false,
 	}
 	catalog, err := v.registry.GetCatalog(ctx)
 	if err != nil {
+		slog.Error("failed to get registry catalog", "err", err)
 		view.Err = err
-		return view, nil
+		return view
 	}
 	for _, repository := range catalog.Repositories {
 		tags, err := v.registry.GetTags(ctx, repository)
 		if err != nil {
+			slog.Error("failed to get registry tags", "err", err, "repository", repository)
 			view.Err = err
-			return view, nil
+			return view
 		}
 		for _, tag := range tags.Tags {
 			manifest, err := v.registry.GetManifest(ctx, tags.Name, tag)
 			if err != nil {
+				slog.Error("failed to get registry manifest", "err", err, "repository", tags.Name, "tag", tag)
 				view.Err = err
-				return view, nil
+				return view
 			}
 			view.Manifests = append(view.Manifests, *manifest)
 		}
 	}
 	view.IsSuccess = true
-	return view, nil
+	return view
 }
 
-func (v *ViewFinder) DeleteRegistryImage(ctx context.Context, repository, tag string) (*ActionResponseView, error) {
+func (v *ViewFinder) DeleteRegistryImage(ctx context.Context, repository, tag string) *ActionResponseView {
 	view := &ActionResponseView{
 		IsSuccess: false,
 	}
@@ -52,5 +58,5 @@ func (v *ViewFinder) DeleteRegistryImage(ctx context.Context, repository, tag st
 		view.IsSuccess = true
 		view.Message = fmt.Sprintf("Deleted image %s:%s", repository, tag)
 	}
-	return view, nil
+	return view
 }

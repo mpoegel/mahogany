@@ -8,8 +8,10 @@ import (
 type WatchtowerView struct {
 }
 
-func (v *ViewFinder) GetWatchtower(ctx context.Context) (*WatchtowerView, error) {
-	return &WatchtowerView{}, nil
+func (v *WatchtowerView) Name() string { return "WatchtowerView" }
+
+func (v *ViewFinder) GetWatchtower(ctx context.Context) *WatchtowerView {
+	return &WatchtowerView{}
 }
 
 func (v *ViewFinder) WatchtowerUpdate(ctx context.Context) *ActionResponseView {

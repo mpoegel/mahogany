@@ -71,6 +71,7 @@
 
     <div class="spacer"></div>
 
+    <h3>ACL</h3>
     <div id="policy-list">
         <div class="policy-list-item" id="policy-list-header">
             <div>Source</div>
@@ -105,6 +106,36 @@
             </div>
             {{end}}
         </div>
+    </div>
+    <div class="spacer"></div>
+
+    <h3>Assets</h3>
+    <div id="asset-table" class="basic-table">
+        <div class="basic-table-row basic-table-header">
+            <div>Package</div>
+            <div>Version</div>
+            <div>Action</div>
+        </div>
+        {{range .Assets}}
+        <div class="basic-table-row">
+            <div>{{.Name}}</div>
+            <div>{{.Version}}</div>
+            <div></div>
+        </div>
+        {{end}}
+    </div>
+
+    <div class="spacer"></div>
+    <label for="packages">Install package</label>
+    <select name="packages" id="packages-select">
+        {{range .AllPackages}}
+        <option value="{{.ID}}">{{.Name}}</option>
+        {{end}}
+    </select>
+    <div class="btn-save">
+        <button class="btn" hx-post="/device/{{.Device.Id}}/package" hx-target="#toast"
+            hx-include="#packages-select">Add</button>
+        <div id="toast"></div>
     </div>
 </div>
 {{end}}

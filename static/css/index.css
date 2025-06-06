@@ -76,7 +76,8 @@ a {
 #manifest-list-header,
 #devices-list-header,
 #policy-list-header,
-#packages-list-header {
+#packages-list-header,
+.basic-table-header {
     font-weight: bold;
     border-bottom: 1px solid black;
 }
@@ -85,7 +86,8 @@ a {
 .manifest-list-item,
 .devices-list-item,
 .policy-list-item,
-.packages-list-item {
+.packages-list-item,
+.basic-table-row {
     display: flex;
     justify-content: space-between;
 }
@@ -95,7 +97,8 @@ a {
 .manifest-list-item:not(:first-child):hover,
 .devices-list-item:not(:first-child):hover,
 .policy-list-item:not(:first-child):hover,
-.packages-list-item:not(:first-child):hover {
+.packages-list-item:not(:first-child):hover,
+.basic-table-row:not(:first-child):hover {
     background-color: rgb(145, 35, 35);
 }
 
@@ -103,7 +106,8 @@ a {
 .manifest-list-item div,
 .devices-list-item div,
 .policy-list-item div,
-.packages-list-item div {
+.packages-list-item div,
+.basic-table-row div {
     flex: 1;
     border-right: 1px solid black;
     padding: 2px 10px;
@@ -113,7 +117,8 @@ a {
 .manifest-list-item div:last-child,
 .devices-list-item div:last-child,
 .policy-list-item div:last-child,
-.packages-list-item div:last-child {
+.packages-list-item div:last-child,
+.basic-table-row div:last-child {
     border-right: none;
 }
 
