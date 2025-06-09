@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	types "github.com/docker/docker/api/types"
 	container "github.com/docker/docker/api/types/container"
 	db "github.com/mpoegel/mahogany/internal/db"
 	sources "github.com/mpoegel/mahogany/pkg/mahogany/sources"
@@ -13,8 +14,16 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+type StatusView struct {
+	NumAgents           int
+	NumDevices          int
+	RegistryConnected   bool
+	WatchtowerConnected bool
+}
+
 type IndexView struct {
-	Containers []container.Summary
+	Status     *StatusView
+	Containers []types.Container
 }
 
 func (v *IndexView) Name() string { return "IndexView" }
@@ -61,7 +70,9 @@ func NewViewFinder(dockerHost, dockerVersion, dbFile string) (*ViewFinder, error
 }
 
 func (v *ViewFinder) GetIndex(ctx context.Context) *IndexView {
-	view := &IndexView{}
+	view := &IndexView{
+		Status: v.GetStatus(ctx),
+	}
 	opts := container.ListOptions{
 		All: true,
 	}
@@ -70,6 +81,20 @@ func (v *ViewFinder) GetIndex(ctx context.Context) *IndexView {
 		slog.Error("failed to get docker container list", "err", err)
 	} else {
 		view.Containers = containerList
+	}
+	return view
+}
+
+func (v *ViewFinder) GetStatus(ctx context.Context) *StatusView {
+	view := &StatusView{
+		NumAgents:           0,
+		NumDevices:          0,
+		RegistryConnected:   v.registry.Status(ctx) == nil,
+		WatchtowerConnected: v.watchtower.Status(ctx) == nil,
+	}
+	devices, err := v.query.ListDevices(ctx)
+	if err != nil {
+		view.NumDevices = len(devices)
 	}
 	return view
 }

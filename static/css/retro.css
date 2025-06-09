@@ -1,0 +1,20 @@
+.box {
+    border: 2px solid black;
+    margin: 10px;
+    padding: 5px;
+}
+
+.box-title {
+    margin-top: -10px;
+    width: max-content;
+    background-color: rgb(103, 10, 10);
+    padding: 0 5px;
+}
+
+nav {
+    display: flex;
+}
+
+nav div {
+    margin: 5px 10px;
+}

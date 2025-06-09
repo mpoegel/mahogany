@@ -1,5 +1,6 @@
 {{define "device"}}
-<div id="device">
+<div class="box">
+    <div class="box-title">Device</div>
     <h2>Device: {{.Device.Name}}</h2>
     <dl>
         <dt>Address</dt>
@@ -68,10 +69,10 @@
             {{end}}
         </dd>
     </dl>
+</div>
 
-    <div class="spacer"></div>
-
-    <h3>ACL</h3>
+<div class="box">
+    <div class="box-title">ACL</div>
     <div id="policy-list">
         <div class="policy-list-item" id="policy-list-header">
             <div>Source</div>
@@ -107,9 +108,11 @@
             {{end}}
         </div>
     </div>
-    <div class="spacer"></div>
+</div>
 
-    <h3>Assets</h3>
+<div class="box">
+    <div class="box-title">Assets</div>
+
     <div id="asset-table" class="basic-table">
         <div class="basic-table-row basic-table-header">
             <div>Package</div>

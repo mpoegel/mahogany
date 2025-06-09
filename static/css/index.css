@@ -179,14 +179,28 @@ a {
     color: white;
     cursor: pointer;
     border: none;
+    padding: 4px;
+    margin: 5px;
 }
 
 .btn:hover {
     background-color: rgb(145, 35, 35) !important;
 }
 
-dt {
-    font-weight: bold;
+.status-bar {
+    display: flex;
+}
+
+.status-bar div {
+    margin: 0px 10px;
+}
+
+.green-text {
+    color: green;
+}
+
+.red-text {
+    color: red;
 }
 
 @media (max-width: 600px) {

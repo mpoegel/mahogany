@@ -5,12 +5,13 @@ import (
 	"io"
 	"log/slog"
 
+	types "github.com/docker/docker/api/types"
 	container "github.com/docker/docker/api/types/container"
 )
 
 type ContainerView struct {
 	TemplateName  string
-	ContainerInfo container.InspectResponse
+	ContainerInfo types.ContainerJSON
 	IsSuccess     bool
 	Err           error
 }

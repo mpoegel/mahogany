@@ -1,8 +1,25 @@
 {{define "titlebar"}}
-<div id="titlebar">
-    <div>
-        <h2>Mahogany</h2>
+<div id="retro-titlebar" class="box">
+    <div class="box-title">Mahogany</div>
+    <nav>
+        <div><a href="/">[1] Docker</a></div>
+        <div><a href="/registry">[2] Registry</a></div>
+        <div><a href="/watchtower">[3] Watchtower</a></div>
+        <div><a href="/packages">[4] Packages</a></div>
+        <div><a href="/control-plane">[5] Control Plane</a></div>
+        <div><a href="/devices">[6] Devices</a></div>
+        <div><a href="/settings">[7] Settings</a></div>
+    </nav>
+</div>
+
+<div class="box">
+    <div class="box-title">Status</div>
+    <div class="status-bar">
+        <div>{{if .NumAgents}}{{.NumAgents}}{{else}}0{{end}} Agents</div>
+        <div>{{if .NumDevices}}{{.NumDevices}}{{else}}0{{end}} Devices</div>
+        <div><span class="{{if .RegistryConnected}}green-text{{else}}red-text{{end}}">■</span> Registry</div>
+        <div><span class="{{if .WatchtowerConnected}}green-text{{else}}red-text{{end}}">■</span> Watchtower</div>
     </div>
-    <div id="toast"></div>
+    <div id="toast">.</div>
 </div>
 {{end}}

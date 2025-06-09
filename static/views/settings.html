@@ -6,73 +6,64 @@
 
 <body>
     {{template "titlebar"}}
-    <div id="content">
-        <div id="sidebar">
-            {{template "sidebar"}}
+    <div class="box">
+        <div class="box-title">Settings</div>
+        <h3>Watchtower</h3>
+        <div class="setting">
+            <label for="WatchtowerAddr">Watchtower Address</label>
+            <input type="text" name="WatchtowerAddr" value="{{.WatchtowerAddr}}" hx-post="/settings?name=WatchtowerAddr"
+                hx-target="next" hx-include="this" hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
+            <div class="settings-toast"></div>
         </div>
-        <div id="settings-content">
-            <div id="settings">
-                <h3>Watchtower</h3>
-                <div class="setting">
-                    <label for="WatchtowerAddr">Watchtower Address</label>
-                    <input type="text" name="WatchtowerAddr" value="{{.WatchtowerAddr}}"
-                        hx-post="/settings?name=WatchtowerAddr" hx-target="next" hx-include="this"
-                        hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
-                    <div class="settings-toast"></div>
-                </div>
-                <div class="setting">
-                    <label for="WatchtowerToken">Watchtower Token</label>
-                    <input type="text" name="WatchtowerToken" value="{{.WatchtowerToken}}"
-                        hx-post="/settings?name=WatchtowerToken" hx-target="next" hx-include="this"
-                        hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
-                    <div class="settings-toast"></div>
-                </div>
-                <div class="setting">
-                    <label for="WatchtowerTimeout">Watchtower Timeout</label>
-                    <input type="text" name="WatchtowerTimeout" value="{{.WatchtowerTimeout}}"
-                        hx-post="/settings?name=WatchtowerTimeout" hx-target="next" hx-include="this"
-                        hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
-                    <div class="settings-toast"></div>
-                </div>
+        <div class="setting">
+            <label for="WatchtowerToken">Watchtower Token</label>
+            <input type="text" name="WatchtowerToken" value="{{.WatchtowerToken}}"
+                hx-post="/settings?name=WatchtowerToken" hx-target="next" hx-include="this"
+                hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
+            <div class="settings-toast"></div>
+        </div>
+        <div class="setting">
+            <label for="WatchtowerTimeout">Watchtower Timeout</label>
+            <input type="text" name="WatchtowerTimeout" value="{{.WatchtowerTimeout}}"
+                hx-post="/settings?name=WatchtowerTimeout" hx-target="next" hx-include="this"
+                hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
+            <div class="settings-toast"></div>
+        </div>
 
-                <h3>Registry</h3>
-                <div class="setting">
-                    <label for="RegistryAddr">Registry Address</label>
-                    <input type="text" name="RegistryAddr" value="{{.RegistryAddr}}"
-                        hx-post="/settings?name=RegistryAddr" hx-target="next" hx-include="this"
-                        hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
-                    <div class="settings-toast"></div>
-                </div>
-                <div class="setting">
-                    <label for="RegistryTimeout">Registry Timeout</label>
-                    <input type="text" name="RegistryTimeout" value="{{.RegistryTimeout}}"
-                        hx-post="/settings?name=RegistryTimeout" hx-target="next" hx-include="this"
-                        hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
-                    <div class="settings-toast"></div>
-                </div>
+        <h3>Registry</h3>
+        <div class="setting">
+            <label for="RegistryAddr">Registry Address</label>
+            <input type="text" name="RegistryAddr" value="{{.RegistryAddr}}" hx-post="/settings?name=RegistryAddr"
+                hx-target="next" hx-include="this" hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
+            <div class="settings-toast"></div>
+        </div>
+        <div class="setting">
+            <label for="RegistryTimeout">Registry Timeout</label>
+            <input type="text" name="RegistryTimeout" value="{{.RegistryTimeout}}"
+                hx-post="/settings?name=RegistryTimeout" hx-target="next" hx-include="this"
+                hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
+            <div class="settings-toast"></div>
+        </div>
 
-                <h3>Tailscale</h3>
-                <div class="setting">
-                    <label for="TailscaleApiKey">Tailscale API KEY</label>
-                    <input type="text" name="TailscaleApiKey" value="{{.TailscaleApiKey}}"
-                        hx-post="/settings?name=TailscaleApiKey" hx-target="next" hx-include="this"
-                        hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
-                    <div class="settings-toast"></div>
-                </div>
-                <div class="setting">
-                    <label for="TailnetName">Tailnet Name</label>
-                    <input type="text" name="TailnetName" value="{{.TailnetName}}" hx-post="/settings?name=TailnetName"
-                        hx-target="next" hx-include="this" hx-trigger="input changed delay:1s"
-                        hx-swap="outerHTML settle:3s">
-                    <div class="settings-toast"></div>
-                </div>
-            </div>
-            <!-- <div class="spacer"></div>
+        <h3>Tailscale</h3>
+        <div class="setting">
+            <label for="TailscaleApiKey">Tailscale API KEY</label>
+            <input type="text" name="TailscaleApiKey" value="{{.TailscaleApiKey}}"
+                hx-post="/settings?name=TailscaleApiKey" hx-target="next" hx-include="this"
+                hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
+            <div class="settings-toast"></div>
+        </div>
+        <div class="setting">
+            <label for="TailnetName">Tailnet Name</label>
+            <input type="text" name="TailnetName" value="{{.TailnetName}}" hx-post="/settings?name=TailnetName"
+                hx-target="next" hx-include="this" hx-trigger="input changed delay:1s" hx-swap="outerHTML settle:3s">
+            <div class="settings-toast"></div>
+        </div>
+    </div>
+    <!-- <div class="spacer"></div>
             <div class="btn-save">
                 <button class="btn" hx-post="/settings" hx-target="#toast" hx-include="#settings">Save</button>
             </div> -->
-        </div>
-    </div>
 </body>
 
 </html>

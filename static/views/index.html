@@ -6,29 +6,27 @@
 
 <body>
     {{template "titlebar"}}
-    <div id="content">
-        <div id="sidebar">
-            {{template "sidebar"}}
-        </div>
-        <div>
-            <div id="containers-list">
-                <div class="container-list-item" id="container-list-header">
-                    <div>ID</div>
-                    <div>Names</div>
-                    <div>Image</div>
-                    <div>Command</div>
-                    <div>Status</div>
-                </div>
-                {{range .Containers}}
-                <div class="container-list-item">
-                    <div><a href="/container/{{.ID}}">{{truncate .ID 12}}</a></div>
-                    <div>{{truncate (index .Names 0) 12}}</div>
-                    <div>{{if eq (slice .Image 0 6) "sha256"}}-{{else}}{{.Image}}{{end}}</div>
-                    <div>{{truncate .Command 16}}</div>
-                    <div>{{.Status}}</div>
-                </div>
-                {{end}}
+
+    <div class="box">
+        <div class="box-title">Containers</div>
+
+        <div id="basic-table">
+            <div class="basic-table-row basic-table-header">
+                <div>ID</div>
+                <div>Names</div>
+                <div>Image</div>
+                <div>Command</div>
+                <div>Status</div>
             </div>
+            {{range .Containers}}
+            <div class="basic-table-row">
+                <div><a href="/container/{{.ID}}">{{truncate .ID 12}}</a></div>
+                <div>{{truncate (index .Names 0) 12}}</div>
+                <div>{{if eq (slice .Image 0 6) "sha256"}}-{{else}}{{.Image}}{{end}}</div>
+                <div>{{truncate .Command 16}}</div>
+                <div>{{.Status}}</div>
+            </div>
+            {{end}}
         </div>
     </div>
 </body>

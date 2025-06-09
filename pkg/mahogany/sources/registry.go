@@ -37,6 +37,7 @@ type RegistryManifest struct {
 }
 
 type RegistryI interface {
+	Status(ctx context.Context) error
 	GetCatalog(ctx context.Context) (*RegistryCatalog, error)
 	GetTags(ctx context.Context, repository string) (*RegistryTags, error)
 	GetManifest(ctx context.Context, repository, tag string) (*RegistryManifest, error)
@@ -55,6 +56,23 @@ func NewRegistry(registryAddr string, timeout time.Duration) RegistryI {
 		addr:    registryAddr,
 		timeout: timeout,
 	}
+}
+
+func (r *Registry) Status(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/v2/", r.addr), nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("incompatible API version")
+	}
+	return nil
 }
 
 func (r *Registry) GetCatalog(ctx context.Context) (*RegistryCatalog, error) {
