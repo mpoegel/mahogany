@@ -14,6 +14,7 @@ import (
 	"time"
 
 	db "github.com/mpoegel/mahogany/internal/db"
+	sources "github.com/mpoegel/mahogany/pkg/mahogany/sources"
 	views "github.com/mpoegel/mahogany/pkg/mahogany/views"
 )
 
@@ -21,11 +22,18 @@ type Server struct {
 	config       Config
 	view         *views.ViewFinder
 	httpServer   *http.Server
-	updateServer *UpdateServer
+	updateServer *sources.UpdateServer
+	ctx          context.Context
 }
 
-func NewServer(config Config, updateServer *UpdateServer) (*Server, error) {
+func NewServer(ctx context.Context, config Config) (*Server, error) {
 	mux := http.NewServeMux()
+
+	updateServer, err := sources.NewUpdateServer(config.TopologyFile, config.Port+1)
+	if err != nil {
+		return nil, err
+	}
+
 	viewFinder, err := views.NewViewFinder(config.DockerHost, config.DockerVersion, config.DbFile)
 	if err != nil {
 		return nil, err
@@ -41,6 +49,7 @@ func NewServer(config Config, updateServer *UpdateServer) (*Server, error) {
 			Handler:      mux,
 		},
 		updateServer: updateServer,
+		ctx:          ctx,
 	}
 
 	mux.HandleFunc("GET /{$}", s.newHandler(func(r *http.Request) Viewer {
@@ -120,16 +129,33 @@ func NewServer(config Config, updateServer *UpdateServer) (*Server, error) {
 }
 
 func (s *Server) Start() error {
-	slog.Info("starting server", "addr", s.httpServer.Addr)
-	if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-		return err
+	c := make(chan error)
+	go func() {
+		if err := s.updateServer.Start(context.Background()); err != nil {
+			slog.Error("cannot start update server", "err", err)
+			c <- err
+		}
+	}()
+	go func() {
+		slog.Info("starting server", "addr", s.httpServer.Addr)
+		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
+			c <- err
+		}
+	}()
+	for {
+		select {
+		case err := <-c:
+			return err
+		case <-s.ctx.Done():
+			return nil
+		}
 	}
-	return nil
 }
 
 func (s *Server) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), s.config.Timeout)
 	defer cancel()
+	s.updateServer.Stop()
 	s.httpServer.Shutdown(ctx)
 }
 
@@ -153,7 +179,7 @@ func (s *Server) HandleContainerLogsStream(w http.ResponseWriter, r *http.Reques
 }
 
 func (s *Server) HandleGithubWebHook(w http.ResponseWriter, r *http.Request) {
-	var event GithubReleaseEvent
+	var event sources.GithubReleaseEvent
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&event); err != nil {
 		slog.Error("failed to decode github webhook", "err", err)
@@ -161,7 +187,7 @@ func (s *Server) HandleGithubWebHook(w http.ResponseWriter, r *http.Request) {
 	}
 	// TODO check github signature
 	slog.Info("received github webhook", "name", *event.Repo.Name)
-	s.updateServer.PropagateGithubRelease(&event)
+	// s.updateServer.PropagateGithubRelease(&event)
 }
 
 func (s *Server) HandlePostSettings(w http.ResponseWriter, r *http.Request) {

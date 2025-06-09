@@ -17,13 +17,10 @@ func RunServer() {
 	config := mahogany.LoadConfig()
 	slog.Info("initialized", "config", config)
 
-	updateServer, err := mahogany.NewUpdateServer(config)
-	if err != nil {
-		slog.Error("cannot create update server", "err", err)
-		return
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	server, err := mahogany.NewServer(config, updateServer)
+	server, err := mahogany.NewServer(ctx, config)
 	if err != nil {
 		slog.Error("cannot create server", "err", err)
 		return
@@ -34,15 +31,8 @@ func RunServer() {
 	go func() {
 		<-c
 		slog.Info("shutting down")
-		updateServer.Stop()
+		cancel()
 		server.Stop()
-	}()
-
-	go func() {
-		if err = updateServer.Start(context.Background()); err != nil {
-			slog.Error("cannot start update server", "err", err)
-			c <- os.Interrupt
-		}
 	}()
 
 	if err = server.Start(); err != nil {

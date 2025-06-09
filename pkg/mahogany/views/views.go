@@ -39,6 +39,7 @@ type ViewFinder struct {
 	docker       sources.DockerI
 	registry     sources.RegistryI
 	watchtower   sources.WatchtowerI
+	updateServer *sources.UpdateServer
 	deviceFinder vpn.VirtualNetworkClient
 	db           *sql.DB
 	query        *db.Queries

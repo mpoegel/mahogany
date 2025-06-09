@@ -1,4 +1,4 @@
-package mahogany
+package sources
 
 type Broker[T any] struct {
 	stopC      chan struct{}

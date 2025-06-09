@@ -1,4 +1,4 @@
-package mahogany
+package sources
 
 import (
 	"context"
@@ -31,8 +31,8 @@ type UpdateServer struct {
 	isClosed      bool
 }
 
-func NewUpdateServer(config Config) (*UpdateServer, error) {
-	topo, err := schema.ReadTopology(config.TopologyFile)
+func NewUpdateServer(topologyFile string, port int) (*UpdateServer, error) {
+	topo, err := schema.ReadTopology(topologyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func NewUpdateServer(config Config) (*UpdateServer, error) {
 		topology:       topo,
 		githubPackages: make(map[string]*schema.Package),
 		packageToHost:  make(map[string]map[string]bool),
-		port:           config.Port + 1,
+		port:           port,
 		releaseBroker:  NewBroker[*schema.Release](),
 		isClosed:       false,
 	}

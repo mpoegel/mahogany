@@ -1,4 +1,4 @@
-package mahogany
+package sources
 
 import (
 	github "github.com/google/go-github/v67/github"
