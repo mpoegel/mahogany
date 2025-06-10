@@ -10,6 +10,13 @@ INSERT INTO devices (
 )
 RETURNING *;
 
+-- name: GetDevice :one
+SELECT * FROM devices
+WHERE hostname = ?;
+
+-- name: CountDevices :one
+SELECT COUNT(*) FROM devices;
+
 -- name: DeleteDevice :exec
 DELETE FROM devices
 WHERE id = ?;
@@ -69,3 +76,7 @@ LIMIT 1;
 UPDATE settings
 set value = ?
 WHERE name = ?;
+
+-- name: ListSettings :many
+SELECT * FROM settings
+ORDER BY id;

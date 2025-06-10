@@ -12,6 +12,7 @@ type RegistryView struct {
 	Manifests []sources.RegistryManifest
 	IsSuccess bool
 	Err       error
+	Status    *StatusView
 }
 
 func (v *RegistryView) Name() string { return "RegistryView" }
@@ -20,6 +21,7 @@ func (v *ViewFinder) GetRegistry(ctx context.Context) *RegistryView {
 	view := &RegistryView{
 		Manifests: make([]sources.RegistryManifest, 0),
 		IsSuccess: false,
+		Status:    v.GetStatus(ctx),
 	}
 	catalog, err := v.registry.GetCatalog(ctx)
 	if err != nil {

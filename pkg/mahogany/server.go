@@ -34,7 +34,7 @@ func NewServer(ctx context.Context, config Config) (*Server, error) {
 		return nil, err
 	}
 
-	viewFinder, err := views.NewViewFinder(config.DockerHost, config.DockerVersion, config.DbFile)
+	viewFinder, err := views.NewViewFinder(config.DockerHost, config.DockerVersion, config.DbFile, updateServer)
 	if err != nil {
 		return nil, err
 	}

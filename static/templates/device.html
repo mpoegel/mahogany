@@ -31,7 +31,8 @@
         <dd>{{.Device.Created}}</dd>
 
         <dt>Last Seen</dt>
-        <dd>{{lastSeen .Device.LastSeen}}</dd>
+        <dd><span class='{{if eq  "Connected" (lastSeen .Device.LastSeen)}}green-text{{else}}red-text{{end}}'>■</span>
+            {{lastSeen .Device.LastSeen}}</dd>
 
         <dt>Key Expiry</dt>
         <dd>{{.Device.IsKeyExpiryDisabled}}</dd>

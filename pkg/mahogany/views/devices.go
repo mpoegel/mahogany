@@ -2,12 +2,13 @@ package views
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"slices"
 	"strings"
 
-	"github.com/mpoegel/mahogany/internal/db"
-	"github.com/mpoegel/mahogany/pkg/vpn"
+	db "github.com/mpoegel/mahogany/internal/db"
+	vpn "github.com/mpoegel/mahogany/pkg/vpn"
 )
 
 type DevicesView struct {
@@ -15,6 +16,7 @@ type DevicesView struct {
 	Policy    *vpn.NetPolicy
 	IsSuccess bool
 	Err       error
+	Status    *StatusView
 }
 
 func (v *DevicesView) Name() string { return "DevicesView" }
@@ -36,6 +38,15 @@ type DeviceAsset struct {
 	Version string
 }
 
+func (v *ViewFinder) syncDevices(ctx context.Context, devices []vpn.Device) error {
+	var allErrs error
+	for _, device := range devices {
+		_, err := v.query.AddDevice(ctx, device.Hostname)
+		allErrs = errors.Join(allErrs, err)
+	}
+	return allErrs
+}
+
 func (v *ViewFinder) GetDevices(ctx context.Context) *DevicesView {
 	view := &DevicesView{}
 	devices, err := v.deviceFinder.ListDevices(ctx)
@@ -45,7 +56,9 @@ func (v *ViewFinder) GetDevices(ctx context.Context) *DevicesView {
 		view.Err = err
 		return view
 	}
+	v.syncDevices(ctx, devices)
 	view.Devices = devices
+	view.Status = v.GetStatus(ctx)
 	policy, err := v.deviceFinder.GetACL(ctx)
 	if err != nil {
 		slog.Error("get policy failed", "err", err)

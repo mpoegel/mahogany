@@ -6,3 +6,4 @@ dist/
 !configs/.env
 topology.toml
 mahogany.db
+mahogany.json

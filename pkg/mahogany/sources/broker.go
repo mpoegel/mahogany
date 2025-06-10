@@ -6,6 +6,7 @@ type Broker[T any] struct {
 	subC       chan chan T
 	unsubC     chan chan T
 	isStopped  bool
+	count      int
 }
 
 func NewBroker[T any]() *Broker[T] {
@@ -31,9 +32,11 @@ func (b *Broker[T]) Start() {
 			return
 		case newC := <-b.subC:
 			subs[newC] = true
+			b.count++
 		case oldC := <-b.unsubC:
 			delete(subs, oldC)
 			close(oldC)
+			b.count--
 		case msg := <-b.broadcastC:
 			for subbedC := range subs {
 				// non-blocking broadcast
@@ -73,4 +76,8 @@ func (b *Broker[T]) Broadcast(msg T) {
 	if !b.isStopped {
 		b.broadcastC <- msg
 	}
+}
+
+func (b *Broker[T]) Count() int {
+	return b.count
 }

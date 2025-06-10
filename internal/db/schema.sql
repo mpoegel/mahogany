@@ -1,11 +1,11 @@
 CREATE TABLE devices (
     id       INTEGER PRIMARY KEY,
-    hostname text NOT NULL
+    hostname text NOT NULL UNIQUE
 );
 
 CREATE TABLE packages (
     id          INTEGER PRIMARY KEY,
-    name        text NOT NULL,
+    name        text NOT NULL UNIQUE,
     install_cmd text NOT NULL,
     update_cmd  text NOT NULL,
     remove_cmd  text

@@ -4,6 +4,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	db "github.com/mpoegel/mahogany/internal/db"
 )
 
 type Config struct {
@@ -42,6 +44,11 @@ func LoadAgentConfig() AgentConfig {
 		DownloadDir:       loadStrEnv("DOWNLOAD_DIR", "/tmp"),
 		TelemetryEndpoint: loadStrEnv("TELEMETRY_ENDPOINT", "localhost:4317"),
 	}
+}
+
+type AppData struct {
+	Packages []db.Package `json:"packages"`
+	Settings []db.Setting `json:"settings"`
 }
 
 func loadStrEnv(name, defaultVal string) string {

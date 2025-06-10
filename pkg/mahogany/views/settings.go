@@ -18,6 +18,7 @@ type SettingsView struct {
 	RegistryTimeout   string
 	TailscaleApiKey   string
 	TailnetName       string
+	Status            *StatusView
 }
 
 func (v *SettingsView) Name() string { return "SettingsView" }
@@ -59,6 +60,7 @@ func (v *ViewFinder) GetSettings(ctx context.Context) *SettingsView {
 		RegistryTimeout:   v.getSetting(ctx, v.query, "RegistryTimeout"),
 		TailscaleApiKey:   v.getSetting(ctx, v.query, "TailscaleApiKey"),
 		TailnetName:       v.getSetting(ctx, v.query, "TailnetName"),
+		Status:            v.GetStatus(ctx),
 	}
 	return view
 }

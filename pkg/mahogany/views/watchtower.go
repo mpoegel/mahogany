@@ -6,12 +6,15 @@ import (
 )
 
 type WatchtowerView struct {
+	Status *StatusView
 }
 
 func (v *WatchtowerView) Name() string { return "WatchtowerView" }
 
 func (v *ViewFinder) GetWatchtower(ctx context.Context) *WatchtowerView {
-	return &WatchtowerView{}
+	return &WatchtowerView{
+		Status: v.GetStatus(ctx),
+	}
 }
 
 func (v *ViewFinder) WatchtowerUpdate(ctx context.Context) *ActionResponseView {

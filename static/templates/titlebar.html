@@ -15,8 +15,8 @@
 <div class="box">
     <div class="box-title">Status</div>
     <div class="status-bar">
-        <div>{{if .NumAgents}}{{.NumAgents}}{{else}}0{{end}} Agents</div>
-        <div>{{if .NumDevices}}{{.NumDevices}}{{else}}0{{end}} Devices</div>
+        <div>{{.NumAgents}} Agents</div>
+        <div>{{.NumDevices}} Devices</div>
         <div><span class="{{if .RegistryConnected}}green-text{{else}}red-text{{end}}">■</span> Registry</div>
         <div><span class="{{if .WatchtowerConnected}}green-text{{else}}red-text{{end}}">■</span> Watchtower</div>
     </div>

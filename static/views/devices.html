@@ -5,7 +5,7 @@
 {{template "header"}}
 
 <body>
-    {{template "titlebar"}}
+    {{template "titlebar" .Status}}
 
     <div id="devices-list" class="box">
         <div class="box-title">Devices</div>
@@ -25,7 +25,8 @@
                     {{if .IsUpdateAvailable}}&#x2191;{{else}}&nbsp;{{end}}
                     {{cutOn .ClientVersion "-"}}
                 </div>
-                <div>{{lastSeen .LastSeen}}</div>
+                <div><span class='{{if eq  "Connected" (lastSeen .LastSeen)}}green-text{{else}}red-text{{end}}'>■</span>
+                    {{lastSeen .LastSeen}}</div>
                 <div>
                     {{range .Tags}}
                     <span class="device-tag">[{{trimPrefix . "tag:"}}]</span>

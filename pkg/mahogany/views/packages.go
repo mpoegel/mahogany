@@ -15,6 +15,7 @@ type PackagesView struct {
 	Packages     []db.Package
 	AddPackage   db.AddPackageParams
 	Toast        string
+	Status       *StatusView
 }
 
 func (v *PackagesView) Name() string { return v.TemplateName }
@@ -26,6 +27,7 @@ func (v *PackagesView) WithName(name string) *PackagesView {
 func (vf *ViewFinder) GetPackages(ctx context.Context) *PackagesView {
 	view := &PackagesView{
 		IsSuccess: true,
+		Status:    vf.GetStatus(ctx),
 	}
 	packages, err := vf.query.ListPackages(ctx)
 	if err != nil {

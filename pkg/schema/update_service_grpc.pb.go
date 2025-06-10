@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UpdateService_RegisterManifest_FullMethodName = "/sequoia.UpdateService/RegisterManifest"
-	UpdateService_ReleaseStream_FullMethodName    = "/sequoia.UpdateService/ReleaseStream"
+	UpdateService_RegisterManifest_FullMethodName  = "/sequoia.UpdateService/RegisterManifest"
+	UpdateService_ReleaseStream_FullMethodName     = "/sequoia.UpdateService/ReleaseStream"
+	UpdateService_AssetStatusStream_FullMethodName = "/sequoia.UpdateService/AssetStatusStream"
 )
 
 // UpdateServiceClient is the client API for UpdateService service.
@@ -29,6 +30,7 @@ const (
 type UpdateServiceClient interface {
 	RegisterManifest(ctx context.Context, in *RegisterManifestRequest, opts ...grpc.CallOption) (*RegisterManifestResponse, error)
 	ReleaseStream(ctx context.Context, in *ReleaseStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ReleaseStreamResponse], error)
+	AssetStatusStream(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[AssetStatusStreamRequest, AssetStatusStreamResponse], error)
 }
 
 type updateServiceClient struct {
@@ -68,12 +70,26 @@ func (c *updateServiceClient) ReleaseStream(ctx context.Context, in *ReleaseStre
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type UpdateService_ReleaseStreamClient = grpc.ServerStreamingClient[ReleaseStreamResponse]
 
+func (c *updateServiceClient) AssetStatusStream(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[AssetStatusStreamRequest, AssetStatusStreamResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &UpdateService_ServiceDesc.Streams[1], UpdateService_AssetStatusStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[AssetStatusStreamRequest, AssetStatusStreamResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type UpdateService_AssetStatusStreamClient = grpc.ClientStreamingClient[AssetStatusStreamRequest, AssetStatusStreamResponse]
+
 // UpdateServiceServer is the server API for UpdateService service.
 // All implementations must embed UnimplementedUpdateServiceServer
 // for forward compatibility.
 type UpdateServiceServer interface {
 	RegisterManifest(context.Context, *RegisterManifestRequest) (*RegisterManifestResponse, error)
 	ReleaseStream(*ReleaseStreamRequest, grpc.ServerStreamingServer[ReleaseStreamResponse]) error
+	AssetStatusStream(grpc.ClientStreamingServer[AssetStatusStreamRequest, AssetStatusStreamResponse]) error
 	mustEmbedUnimplementedUpdateServiceServer()
 }
 
@@ -89,6 +105,9 @@ func (UnimplementedUpdateServiceServer) RegisterManifest(context.Context, *Regis
 }
 func (UnimplementedUpdateServiceServer) ReleaseStream(*ReleaseStreamRequest, grpc.ServerStreamingServer[ReleaseStreamResponse]) error {
 	return status.Errorf(codes.Unimplemented, "method ReleaseStream not implemented")
+}
+func (UnimplementedUpdateServiceServer) AssetStatusStream(grpc.ClientStreamingServer[AssetStatusStreamRequest, AssetStatusStreamResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method AssetStatusStream not implemented")
 }
 func (UnimplementedUpdateServiceServer) mustEmbedUnimplementedUpdateServiceServer() {}
 func (UnimplementedUpdateServiceServer) testEmbeddedByValue()                       {}
@@ -140,6 +159,13 @@ func _UpdateService_ReleaseStream_Handler(srv interface{}, stream grpc.ServerStr
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type UpdateService_ReleaseStreamServer = grpc.ServerStreamingServer[ReleaseStreamResponse]
 
+func _UpdateService_AssetStatusStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(UpdateServiceServer).AssetStatusStream(&grpc.GenericServerStream[AssetStatusStreamRequest, AssetStatusStreamResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type UpdateService_AssetStatusStreamServer = grpc.ClientStreamingServer[AssetStatusStreamRequest, AssetStatusStreamResponse]
+
 // UpdateService_ServiceDesc is the grpc.ServiceDesc for UpdateService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -157,6 +183,11 @@ var UpdateService_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "ReleaseStream",
 			Handler:       _UpdateService_ReleaseStream_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "AssetStatusStream",
+			Handler:       _UpdateService_AssetStatusStream_Handler,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "update_service.proto",

@@ -16,7 +16,7 @@ import (
 
 type StatusView struct {
 	NumAgents           int
-	NumDevices          int
+	NumDevices          int64
 	RegistryConnected   bool
 	WatchtowerConnected bool
 }
@@ -39,13 +39,13 @@ type ViewFinder struct {
 	docker       sources.DockerI
 	registry     sources.RegistryI
 	watchtower   sources.WatchtowerI
-	updateServer *sources.UpdateServer
+	updateServer sources.UpdateServerI
 	deviceFinder vpn.VirtualNetworkClient
 	db           *sql.DB
 	query        *db.Queries
 }
 
-func NewViewFinder(dockerHost, dockerVersion, dbFile string) (*ViewFinder, error) {
+func NewViewFinder(dockerHost, dockerVersion, dbFile string, updateServer sources.UpdateServerI) (*ViewFinder, error) {
 	docker, err := sources.NewDocker(dockerHost, dockerVersion)
 	if err != nil {
 		return nil, err
@@ -57,9 +57,10 @@ func NewViewFinder(dockerHost, dockerVersion, dbFile string) (*ViewFinder, error
 	}
 
 	vf := &ViewFinder{
-		docker: docker,
-		db:     dbConn,
-		query:  db.New(dbConn),
+		docker:       docker,
+		db:           dbConn,
+		query:        db.New(dbConn),
+		updateServer: updateServer,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -83,19 +84,17 @@ func (v *ViewFinder) GetIndex(ctx context.Context) *IndexView {
 	} else {
 		view.Containers = containerList
 	}
+	slog.Info("loaded index", "view", view.Status)
 	return view
 }
 
 func (v *ViewFinder) GetStatus(ctx context.Context) *StatusView {
 	view := &StatusView{
-		NumAgents:           0,
+		NumAgents:           v.updateServer.GetNumConnections(),
 		NumDevices:          0,
 		RegistryConnected:   v.registry.Status(ctx) == nil,
 		WatchtowerConnected: v.watchtower.Status(ctx) == nil,
 	}
-	devices, err := v.query.ListDevices(ctx)
-	if err != nil {
-		view.NumDevices = len(devices)
-	}
+	view.NumDevices, _ = v.query.CountDevices(ctx)
 	return view
 }

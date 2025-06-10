@@ -5,12 +5,18 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"flag"
 	"log/slog"
 	"os"
 	"os/signal"
 	"time"
 
+	db "github.com/mpoegel/mahogany/internal/db"
 	mahogany "github.com/mpoegel/mahogany/pkg/mahogany"
+	_ "modernc.org/sqlite"
 )
 
 func RunServer() {
@@ -83,6 +89,104 @@ func RunAgent() {
 	agent.Close()
 }
 
+func exportData(args []string) {
+	fs := flag.NewFlagSet("export", flag.ExitOnError)
+	dbFile := fs.String("db", "mahogany.db", "database file")
+	filename := fs.String("file", "mahogany.json", "file to export data to")
+
+	if err := fs.Parse(args); err != nil {
+		slog.Error("failed to parse export args", "err", err)
+		return
+	}
+
+	fp, err := os.OpenFile(*filename, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+	if err != nil {
+		slog.Error("failed to open export file", "err", err)
+		return
+	}
+
+	dbConn, err := sql.Open("sqlite", *dbFile)
+	if err != nil {
+		slog.Error("failed to open database file", "err", err)
+		return
+	}
+	query := db.New(dbConn)
+	data := mahogany.AppData{}
+
+	data.Settings, err = query.ListSettings(context.Background())
+	if err != nil {
+		slog.Error("failed to list settings", "err", err)
+		return
+	}
+
+	data.Packages, err = query.ListPackages(context.Background())
+	if err != nil {
+		slog.Error("failed to list packages", "err", err)
+		return
+	}
+
+	encoder := json.NewEncoder(fp)
+	if err := encoder.Encode(data); err != nil {
+		slog.Error("failed to encode app data", "err", err)
+		return
+	}
+	slog.Info("export complete")
+}
+
+func importData(args []string) {
+	fs := flag.NewFlagSet("import", flag.ExitOnError)
+	dbFile := fs.String("db", "mahogany.db", "database file")
+	filename := fs.String("file", "mahogany.json", "file to import data from")
+
+	if err := fs.Parse(args); err != nil {
+		slog.Error("failed to parse import args", "err", err)
+		return
+	}
+
+	fp, err := os.Open(*filename)
+	if err != nil {
+		slog.Error("failed to open import file", "err", err)
+		return
+	}
+
+	dbConn, err := sql.Open("sqlite", *dbFile)
+	if err != nil {
+		slog.Error("failed to open database file", "err", err)
+		return
+	}
+	query := db.New(dbConn)
+	data := mahogany.AppData{}
+	decoder := json.NewDecoder(fp)
+	if err := decoder.Decode(&data); err != nil {
+		slog.Error("failed to parse import file", "err", err)
+		return
+	}
+
+	var allErrs error
+	for _, pkg := range data.Packages {
+		_, err := query.AddPackage(context.Background(), db.AddPackageParams{
+			Name:       pkg.Name,
+			InstallCmd: pkg.InstallCmd,
+			UpdateCmd:  pkg.UpdateCmd,
+			RemoveCmd:  pkg.RemoveCmd,
+		})
+		allErrs = errors.Join(allErrs, err)
+	}
+
+	for _, setting := range data.Settings {
+		err := query.UpdateSetting(context.Background(), db.UpdateSettingParams{
+			Name:  setting.Name,
+			Value: setting.Value,
+		})
+		allErrs = errors.Join(allErrs, err)
+	}
+
+	if allErrs != nil {
+		slog.Warn("import finished with errors", "err", err)
+	}
+	slog.Info("import complete")
+}
+
 func main() {
 	args := os.Args
 	if len(args) < 2 {
@@ -95,6 +199,10 @@ func main() {
 		RunServer()
 	case "agent":
 		RunAgent()
+	case "export":
+		exportData(args[2:])
+	case "import":
+		importData(args[2:])
 	default:
 		slog.Error("invalid argument")
 	}

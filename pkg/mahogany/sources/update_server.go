@@ -15,6 +15,10 @@ import (
 
 const ALL_HOSTS = "*"
 
+type UpdateServerI interface {
+	GetNumConnections() int
+}
+
 type UpdateServer struct {
 	schema.UnimplementedUpdateServiceServer
 
@@ -155,6 +159,7 @@ func (s *UpdateServer) ReleaseStream(req *schema.ReleaseStreamRequest, stream sc
 	if c == nil {
 		return errors.New("subscription unavailable")
 	}
+	slog.Info("new release stream")
 	defer s.releaseBroker.Unsubscribe(c)
 	for {
 		release := <-c
@@ -176,4 +181,8 @@ func (s *UpdateServer) ReleaseStream(req *schema.ReleaseStreamRequest, stream sc
 			}
 		}
 	}
+}
+
+func (s *UpdateServer) GetNumConnections() int {
+	return s.releaseBroker.Count()
 }

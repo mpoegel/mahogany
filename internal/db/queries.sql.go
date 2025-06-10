@@ -94,6 +94,17 @@ func (q *Queries) AddPackage(ctx context.Context, arg AddPackageParams) (Package
 	return i, err
 }
 
+const countDevices = `-- name: CountDevices :one
+SELECT COUNT(*) FROM devices
+`
+
+func (q *Queries) CountDevices(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countDevices)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteDevice = `-- name: DeleteDevice :exec
 DELETE FROM devices
 WHERE id = ?
@@ -112,6 +123,18 @@ WHERE id = ?
 func (q *Queries) DeletePackage(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deletePackage, id)
 	return err
+}
+
+const getDevice = `-- name: GetDevice :one
+SELECT id, hostname FROM devices
+WHERE hostname = ?
+`
+
+func (q *Queries) GetDevice(ctx context.Context, hostname string) (Device, error) {
+	row := q.db.QueryRowContext(ctx, getDevice, hostname)
+	var i Device
+	err := row.Scan(&i.ID, &i.Hostname)
+	return i, err
 }
 
 const getSetting = `-- name: GetSetting :one
@@ -285,6 +308,34 @@ func (q *Queries) ListPackages(ctx context.Context) ([]Package, error) {
 			&i.UpdateCmd,
 			&i.RemoveCmd,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSettings = `-- name: ListSettings :many
+SELECT id, name, value FROM settings
+ORDER BY id
+`
+
+func (q *Queries) ListSettings(ctx context.Context) ([]Setting, error) {
+	rows, err := q.db.QueryContext(ctx, listSettings)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Setting
+	for rows.Next() {
+		var i Setting
+		if err := rows.Scan(&i.ID, &i.Name, &i.Value); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
