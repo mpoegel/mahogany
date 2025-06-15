@@ -17,8 +17,10 @@ type Asset struct {
 }
 
 type Device struct {
-	ID       int64
-	Hostname string
+	ID                int64
+	Hostname          string
+	TailscaleLastSeen sql.NullInt64
+	AgentLastSeen     sql.NullInt64
 }
 
 type Package struct {
@@ -33,4 +35,19 @@ type Setting struct {
 	ID    int64
 	Name  string
 	Value string
+}
+
+type TrackedService struct {
+	ID             int64
+	DeviceID       int64
+	Name           string
+	Status         string
+	LastUpdated    int64
+	ContainerID    sql.NullString
+	ContainerImage sql.NullString
+}
+
+type WatchedService struct {
+	ID   int64
+	Name string
 }

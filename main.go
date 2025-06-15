@@ -125,6 +125,12 @@ func exportData(args []string) {
 		return
 	}
 
+	data.WatchedServices, err = query.ListWatchedServices(context.Background())
+	if err != nil {
+		slog.Error("failed to list watched services", "err", err)
+		return
+	}
+
 	encoder := json.NewEncoder(fp)
 	if err := encoder.Encode(data); err != nil {
 		slog.Error("failed to encode app data", "err", err)
@@ -178,6 +184,11 @@ func importData(args []string) {
 			Name:  setting.Name,
 			Value: setting.Value,
 		})
+		allErrs = errors.Join(allErrs, err)
+	}
+
+	for _, svc := range data.WatchedServices {
+		err := query.AddWatchedService(context.Background(), svc)
 		allErrs = errors.Join(allErrs, err)
 	}
 

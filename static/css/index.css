@@ -24,7 +24,7 @@ a {
     margin: 20px 50px;
     font-style: italic;
     opacity: 0;
-    transition: opacity 3s ease-out;
+    transition: opacity 5s ease-out;
 }
 
 #toast.htmx-swapping {

@@ -3,6 +3,7 @@ package views
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"strconv"
 
 	db "github.com/mpoegel/mahogany/internal/db"
@@ -18,7 +19,8 @@ type PackagesView struct {
 	Status       *StatusView
 }
 
-func (v *PackagesView) Name() string { return v.TemplateName }
+func (v *PackagesView) Name() string         { return v.TemplateName }
+func (v *PackagesView) Headers() http.Header { return http.Header{} }
 func (v *PackagesView) WithName(name string) *PackagesView {
 	v.TemplateName = name
 	return v

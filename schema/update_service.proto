@@ -8,16 +8,19 @@ import "google/protobuf/timestamp.proto";
 service UpdateService {
     rpc RegisterManifest(RegisterManifestRequest) returns (RegisterManifestResponse);
     rpc ReleaseStream(ReleaseStreamRequest) returns (stream ReleaseStreamResponse);
-    rpc AssetStatusStream(stream AssetStatusStreamRequest) returns (AssetStatusStreamResponse);
+    rpc ServicesStream(stream ServicesStreamRequest) returns (stream ServicesStreamResponse);
 }
 
 message RegisterManifestRequest {
-    string hostname = 1;
+    string                    hostname  = 1;
     google.protobuf.Timestamp timestamp = 2;
-    repeated Asset assets = 3;
+    repeated Asset            assets    = 3;
 }
 
 message RegisterManifestResponse {
+    bool            subscribe_to_docker   = 1;
+    bool            subscribe_to_systemd  = 2;
+    repeated string subscribe_to_services = 3;
 }
 
 message ReleaseStreamRequest {
@@ -25,27 +28,80 @@ message ReleaseStreamRequest {
 }
 
 message ReleaseStreamResponse {
-    Release release = 1;
+    Release                   release   = 1;
     google.protobuf.Timestamp timestamp = 2;
 }
 
-message AssetStatusStreamRequest {
-
-}
-
-message AssetStatusStreamResponse {
-
-}
-
 message Release {
-    string name = 1;
-    string version = 2;
-    string repository_name = 3;
-    repeated Asset assets = 4;
-    string install_command = 5;
+    string         name            = 1;
+    string         version         = 2;
+    string         repository_name = 3;
+    repeated Asset assets          = 4;
+    string         install_command = 5;
 }
 
 message Asset {
-    string name = 1;
-    string source_url = 3;
+    string name       = 1;
+    string source_url = 2;
 }
+
+message ServicesStreamRequest {
+    string                    hostname     = 1;
+    google.protobuf.Timestamp timestamp    = 2;
+    repeated ServiceStatus    services     = 3;
+    HostMetrics               host_metrics = 4;
+}
+
+message ServicesStreamResponse {
+    string        service_name   = 1;
+    ServiceAction service_action = 2;
+}
+
+message ServiceStatus {
+    string         name    = 1;
+    ServiceMetrics metrics = 2;
+    oneof service {
+        ServiceDocker  docker_service  = 3;
+        ServiceSystemd systemd_service = 4;
+    }
+}
+
+message ServiceDocker {
+    string          command = 1;
+    int64           created = 2;
+    string          id      = 3;
+    string          image   = 4;
+    string          imageID = 5;
+    repeated string names   = 6;
+    repeated uint32 ports   = 7;
+    string          state   = 8;
+    string          status  = 9;
+}
+
+message ServiceSystemd {
+    string name         = 1;
+    string description  = 2;
+    string load_state   = 3;
+    string active_state = 4;
+    string path         = 5;
+}
+
+enum ServiceState {
+    SERVICE_STATE_STOPPED = 0;
+    SERVICE_STATE_RUNNING = 1;
+}
+
+enum ServiceAction {
+    SERVICE_ACTION_START = 0;
+    SERVICE_ACTION_STOP  = 1;
+}
+
+message HostMetrics {
+    double CpuUsage  = 1;
+    double MemUsage  = 2;
+    double DiskUsage = 3;
+}
+
+message ServiceMetrics {
+}
+

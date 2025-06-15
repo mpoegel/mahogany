@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	sources "github.com/mpoegel/mahogany/pkg/mahogany/sources"
 )
@@ -15,7 +16,8 @@ type RegistryView struct {
 	Status    *StatusView
 }
 
-func (v *RegistryView) Name() string { return "RegistryView" }
+func (v *RegistryView) Name() string         { return "RegistryView" }
+func (v *RegistryView) Headers() http.Header { return http.Header{} }
 
 func (v *ViewFinder) GetRegistry(ctx context.Context) *RegistryView {
 	view := &RegistryView{
@@ -55,10 +57,10 @@ func (v *ViewFinder) DeleteRegistryImage(ctx context.Context, repository, tag st
 		IsSuccess: false,
 	}
 	if err := v.registry.DeleteImage(ctx, repository, tag); err != nil {
-		view.Message = fmt.Sprintf("Failed to delete image: %v", err)
+		view.Toast = fmt.Sprintf("Failed to delete image: %v", err)
 	} else {
 		view.IsSuccess = true
-		view.Message = fmt.Sprintf("Deleted image %s:%s", repository, tag)
+		view.Toast = fmt.Sprintf("Deleted image %s:%s", repository, tag)
 	}
 	return view
 }

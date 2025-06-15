@@ -2,12 +2,14 @@ package sources
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"strings"
 
+	db "github.com/mpoegel/mahogany/internal/db"
 	schema "github.com/mpoegel/mahogany/pkg/schema"
 	grpc "google.golang.org/grpc"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -33,9 +35,11 @@ type UpdateServer struct {
 	releaseBroker *Broker[*schema.Release]
 	ln            net.Listener
 	isClosed      bool
+	db            *sql.DB
+	query         *db.Queries
 }
 
-func NewUpdateServer(topologyFile string, port int) (*UpdateServer, error) {
+func NewUpdateServer(topologyFile string, port int, dbConn *sql.DB) (*UpdateServer, error) {
 	topo, err := schema.ReadTopology(topologyFile)
 	if err != nil {
 		return nil, err
@@ -48,6 +52,8 @@ func NewUpdateServer(topologyFile string, port int) (*UpdateServer, error) {
 		port:           port,
 		releaseBroker:  NewBroker[*schema.Release](),
 		isClosed:       false,
+		db:             dbConn,
+		query:          db.New(dbConn),
 	}
 
 	for _, pack := range s.topology.Baseline {
@@ -150,7 +156,16 @@ func (s *UpdateServer) PropagateGithubRelease(event *GithubReleaseEvent) {
 
 func (s *UpdateServer) RegisterManifest(ctx context.Context, req *schema.RegisterManifestRequest) (*schema.RegisterManifestResponse, error) {
 	slog.Info("got register manifest request", "hostname", req.Hostname)
-	resp := &schema.RegisterManifestResponse{}
+	services, err := s.query.ListWatchedServices(ctx)
+	resp := &schema.RegisterManifestResponse{
+		SubscribeToDocker:  true,
+		SubscribeToSystemd: true,
+	}
+	if err != nil {
+		slog.Warn("cannot list watched services", "err", err)
+	} else {
+		resp.SubscribeToServices = services
+	}
 	return resp, nil
 }
 
@@ -181,6 +196,91 @@ func (s *UpdateServer) ReleaseStream(req *schema.ReleaseStreamRequest, stream sc
 			}
 		}
 	}
+}
+
+func (s *UpdateServer) ServicesStream(stream grpc.BidiStreamingServer[schema.ServicesStreamRequest, schema.ServicesStreamResponse]) error {
+	slog.Info("new services stream")
+	deviceID := int64(-1)
+	trackedServices := map[string]int64{}
+	for {
+		msg, err := stream.Recv()
+		if err != nil {
+			slog.Warn("error receiving from services stream", "err", err)
+			return nil
+		}
+		for _, svc := range msg.Services {
+			if deviceID == -1 {
+				deviceID, err = s.getDeviceID(stream.Context(), msg)
+				if err != nil {
+					slog.Warn("services stream from unregistered device", "hostname", msg.Hostname, "err", err)
+					break
+				}
+			}
+			slog.Info("got tracked service report", "svc", svc)
+			serviceID, ok := trackedServices[svc.Name]
+			if !ok {
+				serviceID, err = s.query.GetTrackedServiceID(stream.Context(), db.GetTrackedServiceIDParams{Name: svc.Name, DeviceID: deviceID})
+				if err != nil {
+					serviceID, err = s.addTrackedService(stream.Context(), deviceID, svc)
+					if err != nil {
+						slog.Warn("cannot add tracked service", "err", err, "svc", svc)
+						continue
+					}
+				}
+				trackedServices[svc.Name] = serviceID
+			} else {
+				if err = s.updateTrackedService(stream.Context(), serviceID, svc); err != nil {
+					slog.Warn("cannot update tracked service", "id", serviceID, "device", deviceID, "err", err, "svc", svc)
+				}
+			}
+		}
+	}
+}
+
+func (s *UpdateServer) getDeviceID(ctx context.Context, msg *schema.ServicesStreamRequest) (int64, error) {
+	deviceID, err := s.query.GetDevice(ctx, msg.Hostname)
+	if err != nil {
+		return -1, err
+	}
+	return deviceID.ID, nil
+}
+
+func (s *UpdateServer) addTrackedService(ctx context.Context, deviceID int64, svc *schema.ServiceStatus) (int64, error) {
+	args := db.AddTrackedServiceParams{
+		DeviceID:    deviceID,
+		Name:        svc.Name,
+		LastUpdated: timestamppb.Now().Seconds,
+	}
+	switch s := svc.Service.(type) {
+	case *schema.ServiceStatus_DockerService:
+		args.ContainerID = sql.NullString{String: s.DockerService.Id, Valid: true}
+		args.ContainerImage = sql.NullString{String: s.DockerService.Image, Valid: true}
+		args.Status = s.DockerService.Status
+	case *schema.ServiceStatus_SystemdService:
+		args.Status = s.SystemdService.ActiveState
+	}
+	trackedSvc, err := s.query.AddTrackedService(ctx, args)
+	if err != nil {
+		return -1, err
+	}
+	slog.Info("tracked service added", "svc", trackedSvc)
+	return trackedSvc.ID, nil
+}
+
+func (s *UpdateServer) updateTrackedService(ctx context.Context, serviceID int64, svc *schema.ServiceStatus) error {
+	args := db.UpdateTrackedServiceParams{
+		ID:          serviceID,
+		LastUpdated: timestamppb.Now().Seconds,
+	}
+	switch s := svc.Service.(type) {
+	case *schema.ServiceStatus_DockerService:
+		args.Status = s.DockerService.Status
+	case *schema.ServiceStatus_SystemdService:
+		args.Status = s.SystemdService.ActiveState
+	}
+	slog.Info("updated tracked service", "args", args)
+	err := s.query.UpdateTrackedService(ctx, args)
+	return err
 }
 
 func (s *UpdateServer) GetNumConnections() int {

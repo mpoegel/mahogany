@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -19,7 +20,8 @@ type DevicesView struct {
 	Status    *StatusView
 }
 
-func (v *DevicesView) Name() string { return "DevicesView" }
+func (v *DevicesView) Name() string         { return "DevicesView" }
+func (v *DevicesView) Headers() http.Header { return http.Header{} }
 
 type DeviceView struct {
 	Device       *vpn.Device
@@ -31,7 +33,8 @@ type DeviceView struct {
 	Err          error
 }
 
-func (v *DeviceView) Name() string { return "DeviceView" }
+func (v *DeviceView) Name() string         { return "DeviceView" }
+func (v *DeviceView) Headers() http.Header { return http.Header{} }
 
 type DeviceAsset struct {
 	Name    string

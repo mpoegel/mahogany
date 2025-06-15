@@ -3,6 +3,7 @@ package mahogany
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	db "github.com/mpoegel/mahogany/internal/db"
@@ -38,17 +39,24 @@ type AgentConfig struct {
 }
 
 func LoadAgentConfig() AgentConfig {
-	return AgentConfig{
+	cfg := AgentConfig{
 		ServerAddr:        loadStrEnv("SERVER_ADDR", "localhost:9091"),
-		HostName:          loadStrEnv("HOSTNAME", "mahogany"),
 		DownloadDir:       loadStrEnv("DOWNLOAD_DIR", "/tmp"),
 		TelemetryEndpoint: loadStrEnv("TELEMETRY_ENDPOINT", "localhost:4317"),
 	}
+	hostname, err := os.ReadFile("/etc/hostname")
+	if err == nil {
+		cfg.HostName = strings.Trim(string(hostname), "\n")
+	} else {
+		cfg.HostName = loadStrEnv("HOSTNAME", "mahogany")
+	}
+	return cfg
 }
 
 type AppData struct {
-	Packages []db.Package `json:"packages"`
-	Settings []db.Setting `json:"settings"`
+	Packages        []db.Package `json:"packages"`
+	Settings        []db.Setting `json:"settings"`
+	WatchedServices []string     `json:"watched_services"`
 }
 
 func loadStrEnv(name, defaultVal string) string {

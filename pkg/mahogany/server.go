@@ -29,12 +29,17 @@ type Server struct {
 func NewServer(ctx context.Context, config Config) (*Server, error) {
 	mux := http.NewServeMux()
 
-	updateServer, err := sources.NewUpdateServer(config.TopologyFile, config.Port+1)
+	dbConn, err := sql.Open("sqlite", config.DbFile)
 	if err != nil {
 		return nil, err
 	}
 
-	viewFinder, err := views.NewViewFinder(config.DockerHost, config.DockerVersion, config.DbFile, updateServer)
+	updateServer, err := sources.NewUpdateServer(config.TopologyFile, config.Port+1, dbConn)
+	if err != nil {
+		return nil, err
+	}
+
+	viewFinder, err := views.NewViewFinder(config.DockerHost, config.DockerVersion, dbConn, updateServer)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +102,12 @@ func NewServer(ctx context.Context, config Config) (*Server, error) {
 		return s.view.GetSettings(r.Context())
 	}))
 	mux.HandleFunc("POST /settings", s.HandlePostSettings)
+	mux.HandleFunc("POST /settings/service", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.PostSettingsWatchedService(r.Context(), r.FormValue("watchedService"))
+	}))
+	mux.HandleFunc("DELETE /settings/service/{name}", s.newHandler(func(r *http.Request) Viewer {
+		return s.view.DeleteWatchedService(r.Context(), r.PathValue("name"))
+	}))
 	mux.HandleFunc("GET /devices", s.newHandler(func(r *http.Request) Viewer {
 		return s.view.GetDevices(r.Context())
 	}))
@@ -218,6 +229,7 @@ func (s *Server) HandlePostSettings(w http.ResponseWriter, r *http.Request) {
 
 type Viewer interface {
 	Name() string
+	Headers() http.Header
 }
 
 func (s *Server) newHandler(viewFunc func(r *http.Request) Viewer) http.HandlerFunc {
@@ -233,6 +245,11 @@ func (s *Server) newHandler(viewFunc func(r *http.Request) Viewer) http.HandlerF
 			slog.Error("view finder did not return a view", "method", r.Method, "path", r.URL.Path)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		}
+		for name, vals := range view.Headers() {
+			for _, val := range vals {
+				w.Header().Add(name, val)
+			}
 		}
 		if err = plate.ExecuteTemplate(w, view.Name(), view); err != nil {
 			slog.Error("failed to execute template", "err", err, "name", view.Name())

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net/http"
 
 	types "github.com/docker/docker/api/types"
 	container "github.com/docker/docker/api/types/container"
@@ -16,7 +17,8 @@ type ContainerView struct {
 	Err           error
 }
 
-func (v *ContainerView) Name() string { return v.TemplateName }
+func (v *ContainerView) Name() string         { return v.TemplateName }
+func (v *ContainerView) Headers() http.Header { return http.Header{} }
 func (v *ContainerView) WithName(name string) *ContainerView {
 	v.TemplateName = name
 	return v
@@ -28,7 +30,8 @@ type ContainerStartView struct {
 	Err       error
 }
 
-func (v *ContainerStartView) Name() string { return "container-start" }
+func (v *ContainerStartView) Name() string         { return "container-start" }
+func (v *ContainerStartView) Headers() http.Header { return http.Header{} }
 
 type ContainerStopView struct {
 	ID        string
@@ -36,7 +39,8 @@ type ContainerStopView struct {
 	Err       error
 }
 
-func (v *ContainerStopView) Name() string { return "container-stop" }
+func (v *ContainerStopView) Name() string         { return "container-stop" }
+func (v *ContainerStopView) Headers() http.Header { return http.Header{} }
 
 type ContainerRestartView struct {
 	ID        string
@@ -44,7 +48,8 @@ type ContainerRestartView struct {
 	Err       error
 }
 
-func (v *ContainerRestartView) Name() string { return "container-restart" }
+func (v *ContainerRestartView) Name() string         { return "container-restart" }
+func (v *ContainerRestartView) Headers() http.Header { return http.Header{} }
 
 type ContainerRemoveView struct {
 	ID        string
@@ -52,7 +57,8 @@ type ContainerRemoveView struct {
 	Err       error
 }
 
-func (v *ContainerRemoveView) Name() string { return "container-delete" }
+func (v *ContainerRemoveView) Name() string         { return "container-delete" }
+func (v *ContainerRemoveView) Headers() http.Header { return http.Header{} }
 
 type ContainerLogsView struct {
 	ID        string

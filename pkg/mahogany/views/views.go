@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"net/http"
 	"time"
 
 	types "github.com/docker/docker/api/types"
@@ -26,14 +27,18 @@ type IndexView struct {
 	Containers []types.Container
 }
 
-func (v *IndexView) Name() string { return "IndexView" }
+func (v *IndexView) Name() string         { return "IndexView" }
+func (v *IndexView) Headers() http.Header { return http.Header{} }
 
 type ActionResponseView struct {
 	IsSuccess bool
-	Message   string
+	Toast     string
+
+	headers http.Header
 }
 
-func (v *ActionResponseView) Name() string { return "toast" }
+func (v *ActionResponseView) Name() string         { return "toast" }
+func (v *ActionResponseView) Headers() http.Header { return v.headers }
 
 type ViewFinder struct {
 	docker       sources.DockerI
@@ -45,13 +50,8 @@ type ViewFinder struct {
 	query        *db.Queries
 }
 
-func NewViewFinder(dockerHost, dockerVersion, dbFile string, updateServer sources.UpdateServerI) (*ViewFinder, error) {
+func NewViewFinder(dockerHost, dockerVersion string, dbConn *sql.DB, updateServer sources.UpdateServerI) (*ViewFinder, error) {
 	docker, err := sources.NewDocker(dockerHost, dockerVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	dbConn, err := sql.Open("sqlite", dbFile)
 	if err != nil {
 		return nil, err
 	}

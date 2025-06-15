@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UpdateService_RegisterManifest_FullMethodName  = "/sequoia.UpdateService/RegisterManifest"
-	UpdateService_ReleaseStream_FullMethodName     = "/sequoia.UpdateService/ReleaseStream"
-	UpdateService_AssetStatusStream_FullMethodName = "/sequoia.UpdateService/AssetStatusStream"
+	UpdateService_RegisterManifest_FullMethodName = "/sequoia.UpdateService/RegisterManifest"
+	UpdateService_ReleaseStream_FullMethodName    = "/sequoia.UpdateService/ReleaseStream"
+	UpdateService_ServicesStream_FullMethodName   = "/sequoia.UpdateService/ServicesStream"
 )
 
 // UpdateServiceClient is the client API for UpdateService service.
@@ -30,7 +30,7 @@ const (
 type UpdateServiceClient interface {
 	RegisterManifest(ctx context.Context, in *RegisterManifestRequest, opts ...grpc.CallOption) (*RegisterManifestResponse, error)
 	ReleaseStream(ctx context.Context, in *ReleaseStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ReleaseStreamResponse], error)
-	AssetStatusStream(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[AssetStatusStreamRequest, AssetStatusStreamResponse], error)
+	ServicesStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ServicesStreamRequest, ServicesStreamResponse], error)
 }
 
 type updateServiceClient struct {
@@ -70,18 +70,18 @@ func (c *updateServiceClient) ReleaseStream(ctx context.Context, in *ReleaseStre
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type UpdateService_ReleaseStreamClient = grpc.ServerStreamingClient[ReleaseStreamResponse]
 
-func (c *updateServiceClient) AssetStatusStream(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[AssetStatusStreamRequest, AssetStatusStreamResponse], error) {
+func (c *updateServiceClient) ServicesStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ServicesStreamRequest, ServicesStreamResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &UpdateService_ServiceDesc.Streams[1], UpdateService_AssetStatusStream_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &UpdateService_ServiceDesc.Streams[1], UpdateService_ServicesStream_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[AssetStatusStreamRequest, AssetStatusStreamResponse]{ClientStream: stream}
+	x := &grpc.GenericClientStream[ServicesStreamRequest, ServicesStreamResponse]{ClientStream: stream}
 	return x, nil
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type UpdateService_AssetStatusStreamClient = grpc.ClientStreamingClient[AssetStatusStreamRequest, AssetStatusStreamResponse]
+type UpdateService_ServicesStreamClient = grpc.BidiStreamingClient[ServicesStreamRequest, ServicesStreamResponse]
 
 // UpdateServiceServer is the server API for UpdateService service.
 // All implementations must embed UnimplementedUpdateServiceServer
@@ -89,7 +89,7 @@ type UpdateService_AssetStatusStreamClient = grpc.ClientStreamingClient[AssetSta
 type UpdateServiceServer interface {
 	RegisterManifest(context.Context, *RegisterManifestRequest) (*RegisterManifestResponse, error)
 	ReleaseStream(*ReleaseStreamRequest, grpc.ServerStreamingServer[ReleaseStreamResponse]) error
-	AssetStatusStream(grpc.ClientStreamingServer[AssetStatusStreamRequest, AssetStatusStreamResponse]) error
+	ServicesStream(grpc.BidiStreamingServer[ServicesStreamRequest, ServicesStreamResponse]) error
 	mustEmbedUnimplementedUpdateServiceServer()
 }
 
@@ -106,8 +106,8 @@ func (UnimplementedUpdateServiceServer) RegisterManifest(context.Context, *Regis
 func (UnimplementedUpdateServiceServer) ReleaseStream(*ReleaseStreamRequest, grpc.ServerStreamingServer[ReleaseStreamResponse]) error {
 	return status.Errorf(codes.Unimplemented, "method ReleaseStream not implemented")
 }
-func (UnimplementedUpdateServiceServer) AssetStatusStream(grpc.ClientStreamingServer[AssetStatusStreamRequest, AssetStatusStreamResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method AssetStatusStream not implemented")
+func (UnimplementedUpdateServiceServer) ServicesStream(grpc.BidiStreamingServer[ServicesStreamRequest, ServicesStreamResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method ServicesStream not implemented")
 }
 func (UnimplementedUpdateServiceServer) mustEmbedUnimplementedUpdateServiceServer() {}
 func (UnimplementedUpdateServiceServer) testEmbeddedByValue()                       {}
@@ -159,12 +159,12 @@ func _UpdateService_ReleaseStream_Handler(srv interface{}, stream grpc.ServerStr
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type UpdateService_ReleaseStreamServer = grpc.ServerStreamingServer[ReleaseStreamResponse]
 
-func _UpdateService_AssetStatusStream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(UpdateServiceServer).AssetStatusStream(&grpc.GenericServerStream[AssetStatusStreamRequest, AssetStatusStreamResponse]{ServerStream: stream})
+func _UpdateService_ServicesStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(UpdateServiceServer).ServicesStream(&grpc.GenericServerStream[ServicesStreamRequest, ServicesStreamResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type UpdateService_AssetStatusStreamServer = grpc.ClientStreamingServer[AssetStatusStreamRequest, AssetStatusStreamResponse]
+type UpdateService_ServicesStreamServer = grpc.BidiStreamingServer[ServicesStreamRequest, ServicesStreamResponse]
 
 // UpdateService_ServiceDesc is the grpc.ServiceDesc for UpdateService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -185,8 +185,9 @@ var UpdateService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "AssetStatusStream",
-			Handler:       _UpdateService_AssetStatusStream_Handler,
+			StreamName:    "ServicesStream",
+			Handler:       _UpdateService_ServicesStream_Handler,
+			ServerStreams: true,
 			ClientStreams: true,
 		},
 	},

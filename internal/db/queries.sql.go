@@ -50,13 +50,18 @@ INSERT INTO devices (
 ) VALUES (
   ?
 )
-RETURNING id, hostname
+RETURNING id, hostname, tailscale_last_seen, agent_last_seen
 `
 
 func (q *Queries) AddDevice(ctx context.Context, hostname string) (Device, error) {
 	row := q.db.QueryRowContext(ctx, addDevice, hostname)
 	var i Device
-	err := row.Scan(&i.ID, &i.Hostname)
+	err := row.Scan(
+		&i.ID,
+		&i.Hostname,
+		&i.TailscaleLastSeen,
+		&i.AgentLastSeen,
+	)
 	return i, err
 }
 
@@ -94,6 +99,55 @@ func (q *Queries) AddPackage(ctx context.Context, arg AddPackageParams) (Package
 	return i, err
 }
 
+const addTrackedService = `-- name: AddTrackedService :one
+INSERT INTO tracked_services (
+  device_id, name, status, last_updated, container_id, container_image
+) VALUES (
+  ?, ?, ?, ?, ?, ?
+)
+RETURNING id, device_id, name, status, last_updated, container_id, container_image
+`
+
+type AddTrackedServiceParams struct {
+	DeviceID       int64
+	Name           string
+	Status         string
+	LastUpdated    int64
+	ContainerID    sql.NullString
+	ContainerImage sql.NullString
+}
+
+func (q *Queries) AddTrackedService(ctx context.Context, arg AddTrackedServiceParams) (TrackedService, error) {
+	row := q.db.QueryRowContext(ctx, addTrackedService,
+		arg.DeviceID,
+		arg.Name,
+		arg.Status,
+		arg.LastUpdated,
+		arg.ContainerID,
+		arg.ContainerImage,
+	)
+	var i TrackedService
+	err := row.Scan(
+		&i.ID,
+		&i.DeviceID,
+		&i.Name,
+		&i.Status,
+		&i.LastUpdated,
+		&i.ContainerID,
+		&i.ContainerImage,
+	)
+	return i, err
+}
+
+const addWatchedService = `-- name: AddWatchedService :exec
+INSERT INTO watched_services (name) VALUES (?)
+`
+
+func (q *Queries) AddWatchedService(ctx context.Context, name string) error {
+	_, err := q.db.ExecContext(ctx, addWatchedService, name)
+	return err
+}
+
 const countDevices = `-- name: CountDevices :one
 SELECT COUNT(*) FROM devices
 `
@@ -125,15 +179,38 @@ func (q *Queries) DeletePackage(ctx context.Context, id int64) error {
 	return err
 }
 
+const deleteTrackedService = `-- name: DeleteTrackedService :exec
+DELETE FROM tracked_services WHERE id = ?
+`
+
+func (q *Queries) DeleteTrackedService(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteTrackedService, id)
+	return err
+}
+
+const deleteWatchedService = `-- name: DeleteWatchedService :exec
+DELETE FROM watched_services WHERE name = ?
+`
+
+func (q *Queries) DeleteWatchedService(ctx context.Context, name string) error {
+	_, err := q.db.ExecContext(ctx, deleteWatchedService, name)
+	return err
+}
+
 const getDevice = `-- name: GetDevice :one
-SELECT id, hostname FROM devices
+SELECT id, hostname, tailscale_last_seen, agent_last_seen FROM devices
 WHERE hostname = ?
 `
 
 func (q *Queries) GetDevice(ctx context.Context, hostname string) (Device, error) {
 	row := q.db.QueryRowContext(ctx, getDevice, hostname)
 	var i Device
-	err := row.Scan(&i.ID, &i.Hostname)
+	err := row.Scan(
+		&i.ID,
+		&i.Hostname,
+		&i.TailscaleLastSeen,
+		&i.AgentLastSeen,
+	)
 	return i, err
 }
 
@@ -153,6 +230,22 @@ func (q *Queries) GetSetting(ctx context.Context, name string) (GetSettingRow, e
 	var i GetSettingRow
 	err := row.Scan(&i.Name, &i.Value)
 	return i, err
+}
+
+const getTrackedServiceID = `-- name: GetTrackedServiceID :one
+SELECT id FROM tracked_services WHERE name=? and device_id=?
+`
+
+type GetTrackedServiceIDParams struct {
+	Name     string
+	DeviceID int64
+}
+
+func (q *Queries) GetTrackedServiceID(ctx context.Context, arg GetTrackedServiceIDParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getTrackedServiceID, arg.Name, arg.DeviceID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const listAssets = `-- name: ListAssets :many
@@ -260,7 +353,7 @@ func (q *Queries) ListAssetsOnDevice(ctx context.Context, deviceID int64) ([]Ass
 }
 
 const listDevices = `-- name: ListDevices :many
-SELECT id, hostname FROM devices
+SELECT id, hostname, tailscale_last_seen, agent_last_seen FROM devices
 ORDER BY hostname
 `
 
@@ -273,7 +366,12 @@ func (q *Queries) ListDevices(ctx context.Context) ([]Device, error) {
 	var items []Device
 	for rows.Next() {
 		var i Device
-		if err := rows.Scan(&i.ID, &i.Hostname); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Hostname,
+			&i.TailscaleLastSeen,
+			&i.AgentLastSeen,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -349,6 +447,86 @@ func (q *Queries) ListSettings(ctx context.Context) ([]Setting, error) {
 	return items, nil
 }
 
+const listTrackedServices = `-- name: ListTrackedServices :many
+SELECT id, device_id, name, status, last_updated, container_id, container_image FROM tracked_services ORDER BY (device_id, name)
+`
+
+func (q *Queries) ListTrackedServices(ctx context.Context) ([]TrackedService, error) {
+	rows, err := q.db.QueryContext(ctx, listTrackedServices)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TrackedService
+	for rows.Next() {
+		var i TrackedService
+		if err := rows.Scan(
+			&i.ID,
+			&i.DeviceID,
+			&i.Name,
+			&i.Status,
+			&i.LastUpdated,
+			&i.ContainerID,
+			&i.ContainerImage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWatchedServices = `-- name: ListWatchedServices :many
+SELECT name FROM watched_services ORDER BY name
+`
+
+func (q *Queries) ListWatchedServices(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listWatchedServices)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		items = append(items, name)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateDevice = `-- name: UpdateDevice :exec
+UPDATE devices
+SET tailscale_last_seen = ?,
+    agent_last_seen = ?
+WHERE hostname = ?
+`
+
+type UpdateDeviceParams struct {
+	TailscaleLastSeen sql.NullInt64
+	AgentLastSeen     sql.NullInt64
+	Hostname          string
+}
+
+func (q *Queries) UpdateDevice(ctx context.Context, arg UpdateDeviceParams) error {
+	_, err := q.db.ExecContext(ctx, updateDevice, arg.TailscaleLastSeen, arg.AgentLastSeen, arg.Hostname)
+	return err
+}
+
 const updatePackage = `-- name: UpdatePackage :exec
 UPDATE packages
 set name = ?,
@@ -390,5 +568,23 @@ type UpdateSettingParams struct {
 
 func (q *Queries) UpdateSetting(ctx context.Context, arg UpdateSettingParams) error {
 	_, err := q.db.ExecContext(ctx, updateSetting, arg.Value, arg.Name)
+	return err
+}
+
+const updateTrackedService = `-- name: UpdateTrackedService :exec
+UPDATE tracked_services
+set status = ?,
+    last_updated = ?
+WHERE id = ?
+`
+
+type UpdateTrackedServiceParams struct {
+	Status      string
+	LastUpdated int64
+	ID          int64
+}
+
+func (q *Queries) UpdateTrackedService(ctx context.Context, arg UpdateTrackedServiceParams) error {
+	_, err := q.db.ExecContext(ctx, updateTrackedService, arg.Status, arg.LastUpdated, arg.ID)
 	return err
 }
